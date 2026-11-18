@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Generate the S-Rack application icon.
+"""Generate the 微音桥·播放器 (MicroBridge Player) application icon.
+
+File names are kept as S-Rack-* for build compatibility; only the artwork brand is shown to users.
 
 Design language (2026-11-08 redesign):
   * deep-blue rounded square + neon rim (kept from the original brand palette)
@@ -9,7 +11,7 @@ Design language (2026-11-08 redesign):
     so the icon still reads as an audio plugin
 
 Outputs (into Assets/):
-  S-Rack-icon.png        1024x1024 master artwork (CMake ICON_BIG)
+  S-Rack-icon.png        1024x1024 master artwork (CMake ICON_BIG, legacy file name)
   S-Rack-icon-small.png  64x64 simplified artwork (CMake ICON_SMALL)
   S-Rack.ico             multi-size Windows icon (16..256)
 

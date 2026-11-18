@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include "SrTheme.h"
 #include "VisualizerComponent.h"
 #include "StemPanel.h"
 
@@ -24,15 +25,16 @@ public:
 
     void paintButton (juce::Graphics& g, bool over, bool down) override
     {
+        sr::syncTheme();
         // 使用完整 bounds（不内缩），attached 时与上方弹窗面板像素级等宽对齐
-        auto b = getLocalBounds().toFloat();
+        const auto b = getLocalBounds().toFloat();
         const bool enabled = isEnabled();
         const bool on = enabled && (getToggleState() || attached);
 
-        juce::Colour bg = ! enabled ? juce::Colour (0xff0b2029)
-                          : attached ? juce::Colour (0xff164a63)
-                          : (on ? juce::Colour (0xff123a4d)
-                                : (over ? juce::Colour (0xff164457) : juce::Colour (0xff10303e)));
+        juce::Colour bg = ! enabled ? sr::pillOff
+                          : attached ? sr::pillBase
+                          : (on ? sr::pillOn
+                                : (over ? sr::pillHover : sr::pill));
         if (down && enabled) bg = bg.brighter (0.12f);
 
         if (attached)
@@ -59,25 +61,32 @@ public:
             edge.quadraticTo (b.getRight() - 0.5f, b.getBottom() - 0.5f,
                               b.getRight() - 0.5f, b.getBottom() - r);
             edge.lineTo (b.getRight() - 0.5f, b.getY());
-            g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.90f));
+            g.setColour (sr::accent.withAlpha (0.90f));
             g.strokePath (edge, juce::PathStrokeType (1.2f));
         }
         else
         {
             const auto rb = b.reduced (0.5f);
-            g.setColour (bg);
+            // MicroBridge 物理键帽：投影 + 立体渐变 + 顶缘高光 + 描边
+            g.setColour (sr::shadow);
+            g.fillRoundedRectangle (rb.translated (0.0f, down ? 1.0f : 2.0f), 6.0f);
+            g.setGradientFill (juce::ColourGradient (bg.brighter (0.14f), 0.0f, rb.getY(),
+                                                     bg.darker (0.30f), 0.0f, rb.getBottom(), false));
             g.fillRoundedRectangle (rb, 6.0f);
-
-            if (on)
-            {
-                g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.9f));
-                g.drawRoundedRectangle (rb.reduced (1.0f), 6.0f, 1.2f);
-            }
+            g.setColour (on ? sr::accent : sr::keyBorder);
+            g.drawRoundedRectangle (rb.reduced (0.5f), 6.0f, 1.0f);
+            g.setColour (juce::Colours::white.withAlpha (down ? 0.05f : 0.14f));
+            g.drawLine (rb.getX() + 6.0f, rb.getY() + 1.0f, rb.getRight() - 6.0f, rb.getY() + 1.0f);
         }
 
-        g.setColour (! enabled ? juce::Colour (0xff4e6b7a)
-                               : (on ? juce::Colours::white : juce::Colour (0xffcfe3ee)));
-        g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 14.0f, juce::Font::plain)));
+        // 字形凹刻：暗影 + 本体（与 MicroBridge SrPillButton 同源）
+        g.setFont (sr::font (13.0f));
+        if (enabled && ! down)
+        {
+            g.setColour (juce::Colours::black.withAlpha (0.35f));
+            g.drawText (getButtonText(), b.translated (0.0f, 0.8f), juce::Justification::centred);
+        }
+        g.setColour (! enabled ? sr::offText : (on ? juce::Colours::white : sr::text));
         g.drawText (getButtonText(), b, juce::Justification::centred);
     }
 
@@ -102,27 +111,29 @@ public:
 
     void paintButton (juce::Graphics& g, bool over, bool down) override
     {
-        auto b = getLocalBounds().toFloat();
+        sr::syncTheme();
+        const auto b  = getLocalBounds().toFloat();
+        const auto rb = b.reduced (0.5f);
         const float cx = b.getCentreX(), cy = b.getCentreY();
-        const float d = juce::jmin (b.getWidth(), b.getHeight());
-        const float s = d * 0.34f;   // 图标半径
+        const float d  = juce::jmin (b.getWidth(), b.getHeight());
+        const float s  = d * 0.30f;   // 图标半径
+        const bool enabled = isEnabled();
 
-        if (main)
-        {
-            auto bg = juce::Colour (0xff29b6f6);
-            if (down) bg = bg.darker (0.15f);
-            else if (over) bg = bg.brighter (0.12f);
-            g.setColour (bg);
-            g.fillEllipse (cx - d * 0.5f, cy - d * 0.5f, d, d);
-        }
-        else
-        {
-            if (over || down)
-            {
-                g.setColour (juce::Colour (0x2effffff));
-                g.fillEllipse (cx - d * 0.5f, cy - d * 0.5f, d, d);
-            }
-        }
+        // 与 PillButton 同源的物理键帽；主按钮用 on 态 + accent 描边保留主次
+        juce::Colour bg = ! enabled ? sr::pillOff
+                          : (main ? sr::pillOn
+                                  : (over || down ? sr::pillHover : sr::pill));
+        if (down && enabled) bg = bg.brighter (0.12f);
+
+        g.setColour (sr::shadow);
+        g.fillRoundedRectangle (rb.translated (0.0f, down ? 1.0f : 2.0f), 6.0f);
+        g.setGradientFill (juce::ColourGradient (bg.brighter (0.14f), 0.0f, rb.getY(),
+                                                 bg.darker (0.30f), 0.0f, rb.getBottom(), false));
+        g.fillRoundedRectangle (rb, 6.0f);
+        g.setColour (main ? sr::accent.withAlpha (0.90f) : sr::keyBorder);
+        g.drawRoundedRectangle (rb.reduced (0.5f), 6.0f, 1.0f);
+        g.setColour (juce::Colours::white.withAlpha (down ? 0.05f : 0.14f));
+        g.drawLine (rb.getX() + 6.0f, rb.getY() + 1.0f, rb.getRight() - 6.0f, rb.getY() + 1.0f);
 
         juce::Path p;
         switch (icon)
@@ -144,7 +155,13 @@ public:
                 break;
         }
 
-        g.setColour (main ? juce::Colour (0xff082430) : juce::Colour (0xfff0ecff));
+        if (enabled && ! down)
+        {
+            g.setColour (juce::Colours::black.withAlpha (0.35f));
+            g.fillPath (p, juce::AffineTransform::translation (0.0f, 0.8f));
+        }
+        g.setColour (! enabled ? sr::offText
+                               : ((main || over || down) ? juce::Colours::white : sr::text));
         g.fillPath (p);
     }
 
@@ -176,14 +193,15 @@ public:
 
     void paintListBoxItem (int row, juce::Graphics& g, int w, int h, bool) override
     {
+        sr::syncTheme();
         const bool cur = (row == proc.getCurrentTrackIndex());
         if (cur)
         {
-            g.setColour (juce::Colour (0xff123a4d));
+            g.setColour (sr::listCurrent);
             g.fillRoundedRectangle (2.0f, 1.0f, (float) w - 4.0f, (float) h - 2.0f, 5.0f);
         }
-        g.setColour (cur ? juce::Colour (0xff29b6f6) : juce::Colour (0xffcfe3ee));
-        g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 12.5f, juce::Font::plain)));
+        g.setColour (cur ? sr::accent : sr::text);
+        g.setFont (sr::font (12.5f));
         g.drawText (juce::String (row + 1) + ". " + proc.getPlaylistItem (row),
                     juce::Rectangle<int> (10, 0, w - 16, h),
                     juce::Justification::centredLeft, true);
@@ -211,13 +229,14 @@ public:
 
     void paint (juce::Graphics& g) override
     {
-        g.setColour (juce::Colour (0xff0c2b39));
+        sr::syncTheme();
+        g.setColour (sr::listBg);
         g.fillRoundedRectangle (getLocalBounds().toFloat().reduced (0.5f), 8.0f);
         ListBox::paint (g);
         if (getNumRows() == 0)
         {
-            g.setColour (juce::Colour (0xff5f7f92));
-            g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 12.5f, juce::Font::plain)));
+            g.setColour (sr::empty);
+            g.setFont (sr::font (12.5f));
             g.drawText (MediaPlayAudioProcessor::zh ("播放列表为空"),
                         getLocalBounds(), juce::Justification::centred);
         }
@@ -257,8 +276,9 @@ public:
                            float sliderPos, float minSliderPos, float maxSliderPos,
                            const juce::Slider::SliderStyle style, juce::Slider&) override
     {
-        auto trackColour = juce::Colour (0xff2a3b46);
-        auto fillColour = juce::Colour (0xff29b6f6);
+        sr::syncTheme();
+        auto trackColour = sr::trackColour;
+        auto fillColour  = sr::fillColour;
 
         if (style == juce::Slider::LinearVertical)
         {
@@ -284,7 +304,7 @@ public:
             g.fillRoundedRectangle ((float) x, cy - trackH * 0.5f, (float) width, trackH, 2.0f);
 
             const float fillW = sliderPos - (float) x;
-            g.setColour (juce::Colour (0xff29b6f6));
+            g.setColour (fillColour);
             g.fillRoundedRectangle ((float) x, cy - trackH * 0.5f, fillW, trackH, 2.0f);
 
             g.setColour (juce::Colours::white);
@@ -304,6 +324,7 @@ public:
 
     void paint (juce::Graphics& g) override
     {
+        sr::syncTheme();
         auto& lyr = proc.getLyrics();
 
         // 歌词已开启（本浮层仅在开启时可见），但未匹配到同名 .lrc 时，
@@ -314,21 +335,21 @@ public:
             const bool hasTrack = proc.getCurrentTrackIndex() >= 0;
             if (hasTrack)
             {
-                g.setColour (juce::Colour (0xff9fd0dd));
-                g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 13.0f, juce::Font::plain)));
+                g.setColour (sr::dim);
+                g.setFont (sr::font (13.0f));
                 g.drawText (MediaPlayAudioProcessor::zh ("未找到歌词文件"),
                             juce::Rectangle<float> (0.0f, b.getY(), b.getWidth(), b.getHeight() * 0.52f),
                             juce::Justification::centred);
-                g.setColour (juce::Colour (0xff66808f));
-                g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 10.5f, juce::Font::plain)));
+                g.setColour (sr::faint);
+                g.setFont (sr::font (10.5f));
                 g.drawText (MediaPlayAudioProcessor::zh ("把同名 .lrc 放到歌曲同目录"),
                             juce::Rectangle<float> (0.0f, b.getY() + b.getHeight() * 0.52f, b.getWidth(), b.getHeight() * 0.48f),
                             juce::Justification::centred);
             }
             else
             {
-                g.setColour (juce::Colour (0xff9fd0dd));
-                g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 13.0f, juce::Font::plain)));
+                g.setColour (sr::dim);
+                g.setFont (sr::font (13.0f));
                 g.drawText (MediaPlayAudioProcessor::zh ("未加载曲目"), b, juce::Justification::centred);
             }
             return;
@@ -364,11 +385,12 @@ private:
     static void drawKtvLine (juce::Graphics& g, const LyricLine* L, double t,
                              juce::Rectangle<float> area, float centreX, bool current)
     {
+        sr::syncTheme();
         if (L == nullptr || L->text.trim().isEmpty()) return;
 
         // 字号随歌词行高自适应：当前行略大于预告行，且都明显小于行高，留出上下净空
         const float baseH = juce::jmin (current ? 34.0f : 28.0f, area.getHeight() * 0.78f);
-        juce::Font font (juce::FontOptions ("Microsoft YaHei UI", baseH, juce::Font::bold));
+        juce::Font font = sr::font (baseH, true);
         float textW = juce::GlyphArrangement::getStringWidth (font, L->text);
         // 限制宽度：不超过区域，也不越过自身中心到左右边缘（错位排布时不越界/不重叠）
         const float maxW = juce::jmin (area.getWidth() * 0.94f,
@@ -384,15 +406,15 @@ private:
 
         // 深色衬底：把歌词和频谱隔开。纵向只外扩 2px，避免两行底板叠在一起。
         const auto backing = textRect.expanded (12.0f, 2.0f);
-        g.setColour (juce::Colour (0xa8061a24));
+        g.setColour (sr::lyricBacking);
         g.fillRoundedRectangle (backing, (float) backing.getHeight() * 0.30f);
 
         g.setFont (font);
         // 阴影提升可读性
         g.setColour (juce::Colours::black.withAlpha (0.55f));
         g.drawText (L->text, textRect.translated (2.0f, 2.0f), juce::Justification::centredLeft, false);
-        // 未唱底色：改成中性浅白，避免和已唱渐变的绿端撞色（原来用绿色）
-        g.setColour (current ? juce::Colour (0xfff0f7fb) : juce::Colour (0xcfffffff));
+        // 未唱底色：中性浅白（深主题）/ 深蓝（浅主题），避免和已唱渐变绿端撞色
+        g.setColour (current ? sr::lyricText : sr::lyricTextDim);
         g.drawText (L->text, textRect, juce::Justification::centredLeft, false);
 
         // 已唱渐染：红 → 黄 → 绿，直接复用频谱 LED 的三色
@@ -431,11 +453,11 @@ private:
             // 斜向渐变：文字横向占绝大多数权重，视觉上是「红 → 黄 → 绿」自左向右展开，
             // 同时带一点自上而下的色差，和顶部频谱柱的 VU 配色一致。
             // 渐变坐标固定在整行文字上（不随 filled 变化），逐字点亮时颜色不会跳动。
-            juce::ColourGradient sung (juce::Colour (0xffe4390e),
+            juce::ColourGradient sung (sr::red,
                                        textRect.getX(), textRect.getY(),
-                                       juce::Colour (0xff33d433),
+                                       sr::green,
                                        textRect.getRight(), textRect.getBottom(), false);
-            sung.addColour (0.55, juce::Colour (0xffeed500));
+            sung.addColour (0.55, sr::yellow);
             g.setGradientFill (sung);
             g.drawText (L->text, textRect, juce::Justification::centredLeft, false);
             g.restoreState();
@@ -451,6 +473,7 @@ private:
 // 与下方 attached 状态的按钮拼在一起，视觉上像从按钮本身向上长出来。
 inline void drawVerticalPopupPanel (juce::Graphics& g, juce::Component& c, const juce::String& title)
 {
+    sr::syncTheme();
     const auto b = c.getLocalBounds().toFloat();
     const float w = b.getWidth();
     const float r = juce::jmin (10.0f, w * 0.20f);
@@ -463,11 +486,11 @@ inline void drawVerticalPopupPanel (juce::Graphics& g, juce::Component& c, const
     panel.quadraticTo (b.getRight(), b.getY(), b.getRight(), b.getY() + r);
     panel.lineTo (b.getRight(), b.getBottom());
     panel.closeSubPath();
-    g.setColour (juce::Colour (0xf2061a24));
+    g.setColour (sr::popupBg);
     g.fillPath (panel);
 
     // 底部只留极淡的过渡，不做横向亮带，避免把面板与按钮「切」开
-    g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.07f));
+    g.setColour (sr::accent.withAlpha (0.07f));
     g.fillRect (b.getX() + 1.5f, b.getBottom() - 8.0f, w - 3.0f, 7.0f);
 
     // 描边只走上 / 左 / 右三边，底边留空，与下方按钮连成一体
@@ -478,17 +501,16 @@ inline void drawVerticalPopupPanel (juce::Graphics& g, juce::Component& c, const
     edge.lineTo (b.getRight() - r, b.getY() + 0.5f);
     edge.quadraticTo (b.getRight() - 0.5f, b.getY() + 0.5f, b.getRight() - 0.5f, b.getY() + r);
     edge.lineTo (b.getRight() - 0.5f, b.getBottom());
-    g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.65f));
+    g.setColour (sr::popupBorder);
     g.strokePath (edge, juce::PathStrokeType (1.0f));
 
     // 接缝亮线：与按钮上沿对齐，暗示两者是同一块
-    g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.30f));
+    g.setColour (sr::accent.withAlpha (0.30f));
     g.fillRect (b.getX() + 2.0f, b.getBottom() - 1.0f, w - 4.0f, 1.0f);
 
     // 标题：窄面板自动缩小字号
-    g.setColour (juce::Colours::white);
-    g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI",
-                                              w < 60.0f ? 10.0f : 11.5f, juce::Font::bold)));
+    g.setColour (sr::text);
+    g.setFont (sr::font (w < 60.0f ? 10.0f : 11.5f, true));
     g.drawText (title, juce::Rectangle<float> (0, 5.0f, w, 17.0f), juce::Justification::centred);
 }
 
@@ -514,6 +536,7 @@ public:
 
     void paint (juce::Graphics& g) override
     {
+        sr::syncTheme();
         const auto b = getLocalBounds().toFloat();
         const float w = b.getWidth(), h = b.getHeight();
         const bool narrow = w < 60.0f;
@@ -525,16 +548,16 @@ public:
         // 上 / 下方向提示：窄面板改为居中排布，不再占用轨道右侧空间
         g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI",
                                                   narrow ? 9.0f : 10.0f, juce::Font::plain)));
-        g.setColour (juce::Colour (0xff8bc34a));
+        g.setColour (sr::early);
         g.drawText (MediaPlayAudioProcessor::zh ("提前"),
                     juce::Rectangle<float> (0, 24.0f, w, 14.0f), juce::Justification::centred);
-        g.setColour (juce::Colour (0xffffd54f));
+        g.setColour (sr::late);
         g.drawText (MediaPlayAudioProcessor::zh ("延后"),
                     juce::Rectangle<float> (0, tr.getBottom() + 2.0f, w, 14.0f),
                     juce::Justification::centred);
 
         // 轨道
-        g.setColour (juce::Colour (0xff2a3b46));
+        g.setColour (sr::trackColour);
         g.fillRoundedRectangle (tr, 3.0f);
 
         // 刻度：0 / ±2 / ±4 / ±6 / ±8 / ±10（居中短横线）
@@ -544,11 +567,11 @@ public:
             const bool zero = (s == 0);
             const float half = zero ? juce::jmin (11.0f, w * 0.20f)
                                     : juce::jmin (7.0f, w * 0.13f);
-            g.setColour (zero ? juce::Colour (0xff29b6f6) : juce::Colour (0x40ffffff));
+            g.setColour (zero ? sr::accent : juce::Colour (0x40ffffff));
             g.fillRect (cx - half, fy - 0.5f, half * 2.0f, 1.0f);
             if (zero && ! narrow)
             {
-                g.setColour (juce::Colour (0xff29b6f6));
+                g.setColour (sr::accent);
                 g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 9.0f, juce::Font::plain)));
                 g.drawText ("0", juce::Rectangle<float> (cx + 12.0f, fy - 6.0f, 24.0f, 12.0f),
                             juce::Justification::centredLeft);
@@ -559,20 +582,20 @@ public:
         const double off = currentOffset();
         const float hy = yForSeconds (off);
         const float zeroY = yForSeconds (0.0);
-        g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.55f));
+        g.setColour (sr::accent.withAlpha (0.55f));
         g.fillRect (tr.getX() + 1.0f, juce::jmin (hy, zeroY),
                     tr.getWidth() - 2.0f, std::abs (hy - zeroY));
 
         // 把手（白圆 + accent 描边）
         g.setColour (juce::Colours::white);
         g.fillEllipse (cx - 7.0f, hy - 7.0f, 14.0f, 14.0f);
-        g.setColour (juce::Colour (0xff29b6f6));
+        g.setColour (sr::accent);
         g.drawEllipse (cx - 7.0f, hy - 7.0f, 14.0f, 14.0f, 2.0f);
 
         // 底部数值
         g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI",
                                                   narrow ? 10.5f : 12.0f, juce::Font::bold)));
-        g.setColour (std::abs (off) < 0.05 ? juce::Colour (0xffcfe3ee) : juce::Colour (0xff29b6f6));
+        g.setColour (std::abs (off) < 0.05 ? sr::text : sr::accent);
         g.drawText (offText (off), juce::Rectangle<float> (0, h - 27.0f, w, 19.0f),
                     juce::Justification::centred);
     }
@@ -655,6 +678,7 @@ public:
 
     void paint (juce::Graphics& g) override
     {
+        sr::syncTheme();
         const auto b = getLocalBounds().toFloat();
         const float w = b.getWidth(), h = b.getHeight();
         const bool narrow = w < 60.0f;
@@ -665,15 +689,15 @@ public:
 
         g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI",
                                                   narrow ? 9.0f : 10.0f, juce::Font::plain)));
-        g.setColour (juce::Colour (0xff8bc34a));
+        g.setColour (sr::early);
         g.drawText ("100", juce::Rectangle<float> (0, 24.0f, w, 14.0f), juce::Justification::centred);
-        g.setColour (juce::Colour (0xffffd54f));
+        g.setColour (sr::late);
         g.drawText ("0", juce::Rectangle<float> (0, trackRect().getBottom() + 2.0f, w, 14.0f),
                     juce::Justification::centred);
 
         const auto tr = trackRect();
         const float cx = tr.getCentreX();
-        g.setColour (juce::Colour (0xff2a3b46));
+        g.setColour (sr::trackColour);
         g.fillRoundedRectangle (tr, 3.0f);
 
         // 刻度：0 / 25 / 50 / 75 / 100
@@ -683,24 +707,24 @@ public:
             const bool major = (s == 0 || s == 100);
             const float half = major ? juce::jmin (11.0f, w * 0.20f)
                                      : juce::jmin (7.0f, w * 0.13f);
-            g.setColour (major ? juce::Colour (0xff29b6f6) : juce::Colour (0x40ffffff));
+            g.setColour (major ? sr::accent : juce::Colour (0x40ffffff));
             g.fillRect (cx - half, fy - 0.5f, half * 2.0f, 1.0f);
         }
 
         // 已应用区段高亮（把手 → 底部）
         const float hy = yForVolume (vol);
-        g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.55f));
+        g.setColour (sr::accent.withAlpha (0.55f));
         g.fillRect (tr.getX() + 1.0f, hy, tr.getWidth() - 2.0f, tr.getBottom() - hy);
 
         // 把手
         g.setColour (juce::Colours::white);
         g.fillEllipse (cx - 7.0f, hy - 7.0f, 14.0f, 14.0f);
-        g.setColour (juce::Colour (0xff29b6f6));
+        g.setColour (sr::accent);
         g.drawEllipse (cx - 7.0f, hy - 7.0f, 14.0f, 14.0f, 2.0f);
 
         g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI",
                                                   narrow ? 10.5f : 12.0f, juce::Font::bold)));
-        g.setColour (vol > 0.995f ? juce::Colour (0xffcfe3ee) : juce::Colour (0xff29b6f6));
+        g.setColour (vol > 0.995f ? sr::text : sr::accent);
         g.drawText (juce::String (juce::roundToInt (vol * 100.0f)) + "%",
                     juce::Rectangle<float> (0, h - 27.0f, w, 19.0f), juce::Justification::centred);
     }
@@ -780,17 +804,17 @@ public:
 
             if (sel || hot)
             {
-                g.setColour (sel ? juce::Colour (0xff123a4d) : juce::Colour (0x22ffffff));
+                g.setColour (sel ? sr::listCurrent : juce::Colour (0x22ffffff));
                 g.fillRoundedRectangle (r.reduced (3.0f, 2.0f), 6.0f);
             }
             if (sel)
             {
-                g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.90f));
+                g.setColour (sr::accent.withAlpha (0.90f));
                 g.drawRoundedRectangle (r.reduced (3.0f, 2.0f), 6.0f, 1.0f);
                 g.fillEllipse (r.getX() + 7.0f, r.getCentreY() - 3.0f, 6.0f, 6.0f);
             }
 
-            g.setColour (sel ? juce::Colours::white : juce::Colour (0xffcfe3ee));
+            g.setColour (sel ? juce::Colours::white : sr::text);
             g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 10.5f,
                                                       sel ? juce::Font::bold : juce::Font::plain)));
             g.drawText (MediaPlayAudioProcessor::playModeName ((MediaPlayAudioProcessor::PlayMode) i),
@@ -863,17 +887,17 @@ public:
 
             if (sel || hot)
             {
-                g.setColour (sel ? juce::Colour (0xff123a4d) : juce::Colour (0x22ffffff));
+                g.setColour (sel ? sr::listCurrent : juce::Colour (0x22ffffff));
                 g.fillRoundedRectangle (r.reduced (3.0f, 2.0f), 6.0f);
             }
             if (sel)
             {
-                g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.90f));
+                g.setColour (sr::accent.withAlpha (0.90f));
                 g.drawRoundedRectangle (r.reduced (3.0f, 2.0f), 6.0f, 1.0f);
                 g.fillEllipse (r.getX() + 7.0f, r.getCentreY() - 3.0f, 6.0f, 6.0f);
             }
 
-            g.setColour (sel ? juce::Colours::white : juce::Colour (0xffcfe3ee));
+            g.setColour (sel ? juce::Colours::white : sr::text);
             g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 11.5f,
                                                       sel ? juce::Font::bold : juce::Font::plain)));
             g.drawText (MediaPlayAudioProcessor::outputSourceName (i),
@@ -979,23 +1003,23 @@ public:
 
     void paint (juce::Graphics& g) override
     {
+        sr::syncTheme();
         const auto b = getLocalBounds().toFloat();
-        g.setColour (juce::Colour (0xd8061a24));
+        g.setColour (sr::popupBg.withAlpha (0.92f));
         g.fillRoundedRectangle (b, 7.0f);
-        g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.28f));
+        g.setColour (sr::accent.withAlpha (0.28f));
         g.drawRoundedRectangle (b.reduced (0.5f), 7.0f, 1.0f);
 
         const float textW = b.getWidth() - 96.0f;
         const bool ready = proc.hasVocalSource();
         const bool busy  = proc.isPreSeparating();
-        g.setColour (ready ? juce::Colour (0xff8bc34a)
-                           : (busy ? juce::Colour (0xffffd54f) : juce::Colour (0xff9dc0d0)));
-        g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 11.5f, juce::Font::bold)));
+        g.setColour (ready ? sr::early : (busy ? sr::late : sr::dim));
+        g.setFont (sr::font (11.5f, true));
         g.drawText (line1, juce::Rectangle<float> (12.0f, 1.0f, textW, 16.0f),
                     juce::Justification::centredLeft, true);
 
-        g.setColour (juce::Colour (0xffb9d4e0));
-        g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 10.0f, juce::Font::plain)));
+        g.setColour (sr::dim);
+        g.setFont (sr::font (10.0f));
         g.drawText (line2, juce::Rectangle<float> (12.0f, 17.0f, textW, 15.0f),
                     juce::Justification::centredLeft, true);
     }
@@ -1025,7 +1049,7 @@ public:
         bothBtn.onClick  = [this] { begin (AiExporter::Mode::Both); };
 
         sourceLabel.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 12.5f, juce::Font::plain)));
-        sourceLabel.setColour (juce::Label::textColourId, juce::Colour (0xffcfe3ee));
+        sourceLabel.setColour (juce::Label::textColourId, sr::text);
         addAndMakeVisible (sourceLabel);
 
         statusLabel.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 12.0f, juce::Font::plain)));
@@ -1113,7 +1137,7 @@ public:
         g.setColour (juce::Colour (0xff1b3c4c).withAlpha (0.7f));
         g.fillRect (0.0f, 33.0f, w, 1.0f);
 
-        g.setColour (juce::Colour (0xff29b6f6));
+        g.setColour (sr::accent);
         g.fillRoundedRectangle (14.0f, 12.0f, 4.0f, 16.0f, 2.0f);
         g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 14.0f, juce::Font::bold)));
         g.setColour (juce::Colours::white);
@@ -1129,7 +1153,7 @@ public:
         const float fw = bw * juce::jlimit (0.0f, 1.0f, (float) progressValue);
         if (fw > 0.0f)
         {
-            g.setColour (juce::Colour (0xff29b6f6));
+            g.setColour (sr::accent);
             g.fillRoundedRectangle (bx, by, fw, bh, 3.0f);
         }
 
@@ -1211,7 +1235,7 @@ private:
         {
             g.setColour (juce::Colour (0xff33d433));
             g.fillEllipse (8.0f, h * 0.5f - 2.5f, 5.0f, 5.0f);
-            g.setColour (juce::Colour (0xffcfe3ee));
+            g.setColour (sr::text);
             g.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 12.0f, juce::Font::plain)));
             g.drawText (files[row].getFileName(),
                         juce::Rectangle<int> (20, 0, w - 26, h),
@@ -1263,6 +1287,8 @@ private:
     void applyTab();
     // 中英切换：重建所有静态文案 + 重绘所有自绘面板
     void applyLanguage();
+    // 主题切换：刷新按钮文案 + 重绘所有自绘面板（颜色在 paint 入口实时读取 sr::）
+    void applyTheme();
 
     MediaPlayAudioProcessor& processorRef;
 
@@ -1278,6 +1304,8 @@ private:
     PillButton sepBtn    { MediaPlayAudioProcessor::zh ("分离音频") };
     // 旁通：机架效果器语义——只把宿主输入原样送出，不播放插件内置播放器
     PillButton bypassBtn { MediaPlayAudioProcessor::zh ("旁通"), true };
+    // 深 / 浅主题切换：与「中 / EN」同排右上角，文案随语言与当前主题刷新
+    PillButton themeBtn  { MediaPlayAudioProcessor::zh ("浅色") };
     // 中英文切换：固定文案「中 / EN」，点亮表示当前为 English
     PillButton langBtn   { MediaPlayAudioProcessor::zh ("中 / EN") };
 
@@ -1307,11 +1335,12 @@ private:
     int sepTick = 0;
     juce::String lastSepBtnText, lastSourceText, lastTrackText;
     int lastLanguage = -1;   // timerCallback 检测宿主状态恢复导致的语言变化
+    int lastTheme    = -1;   // timerCallback 检测宿主状态恢复导致的主题变化
 
     juce::Label timeLabel;
     juce::Slider seekSlider { juce::Slider::LinearHorizontal, juce::Slider::NoTextBox };
 
-    juce::Label appTitle { {}, MediaPlayAudioProcessor::zh ("S-Rack_媒体播放") };
+    juce::Label appTitle { {}, juce::String (juce::CharPointer_UTF8 ("微音桥·播放器")) };
 
     PlayerLookAndFeel lookAndFeel;
     std::unique_ptr<juce::FileChooser> fileChooser;

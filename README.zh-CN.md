@@ -1,17 +1,17 @@
-# S-Rack
+# 微音桥·播放器
 
 [English](README.md) · **简体中文**
 
 > **v1.0.0** · Windows x64 · VST3 效果器插件 + 独立播放器 · JUCE 8 / C++17
 
-![S-Rack 简体中文界面（v1.0.0）](docs/screenshot-zh-CN.png)
+![微音桥·播放器 简体中文界面（v1.0.0）](docs/screenshot-zh-CN.png)
 
 [English UI 截图](docs/screenshot-en.png)
 
-S-Rack 是一款赛博朋克风格的音频播放器，提供两种形态：
+微音桥·播放器是一款赛博朋克风格的音频播放器，提供两种形态：
 
 - **VST3 插件** —— 可加载到 DAW / 机架的任意轨道（分类为 `Fx`）。
-- **独立播放器** —— 双击 `S-Rack.exe` 即可使用，无需宿主。
+- **独立播放器** —— 双击 `微音桥·播放器.exe` 即可使用，无需宿主。
 
 两者共用同一套播放引擎与 MDX-Net 分离引擎，并自带运行期依赖。
 
@@ -30,7 +30,7 @@ S-Rack 是一款赛博朋克风格的音频播放器，提供两种形态：
 | 🔀 **旁通** | 只让宿主轨道输入原样通过，不叠加插件内置播放器的声音（不是静音）。 |
 | 🌐 **中英切换** | 默认简体中文，点右上角「中 / EN」切 English。语言、播放列表、播放位置、音量、旁通及各开关都随宿主工程保存恢复。 |
 
-> **关于分离**：S-Rack 采用**离线预分离**，不做实时分轨。MDX-Net 速度约为 0.62× 实时，一首 5 分钟的歌约需 8 分钟。分离期间可继续正常听原声，完成后输出源切换按钮自动解锁。WAV 一旦落盘，下次加载同曲会直接命中缓存，秒开切换。
+> **关于分离**：微音桥·播放器采用**离线预分离**，不做实时分轨。MDX-Net 速度约为 0.62× 实时，一首 5 分钟的歌约需 8 分钟。分离期间可继续正常听原声，完成后输出源切换按钮自动解锁。WAV 一旦落盘，下次加载同曲会直接命中缓存，秒开切换。
 
 ---
 
@@ -40,14 +40,14 @@ S-Rack 是一款赛博朋克风格的音频播放器，提供两种形态：
 
 | 资产 | 内容 |
 |---|---|
-| `S-Rack-Standalone-v1.0.0-win64.zip` | `S-Rack.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
-| `S-Rack-VST3-v1.0.0-win64.zip` | `S-Rack.vst3` 包（已内含 DLL、模型与权重） |
+| `微音桥·播放器-Standalone-v1.0.0-win64.zip` | `微音桥·播放器.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
+| `微音桥·播放器-VST3-v1.0.0-win64.zip` | `微音桥·播放器.vst3` 包（已内含 DLL、模型与权重） |
 
 见 [Releases](../../releases)。
 
-- **独立版**：解压到任意目录运行 `S-Rack.exe`，在音频设置里选对输出设备。
-- **VST3**：把整个 `S-Rack.vst3` 文件夹复制到 `C:\Program Files\Common Files\VST3\`，再到宿主里重新扫描插件（构建脚本会自动完成这一步）。
-- ⚠️ 若系统里还留着旧版 `MediaPlay.vst3`，请**手动删除**：它与 `S-Rack.vst3` 使用同一 VST3 class ID，宿主可能列出两个插件或加载到错误的包。
+- **独立版**：解压到任意目录运行 `微音桥·播放器.exe`，在音频设置里选对输出设备。
+- **VST3**：把整个 `微音桥·播放器.vst3` 文件夹复制到 `C:\Program Files\Common Files\VST3\`，再到宿主里重新扫描插件（构建脚本会自动完成这一步）。
+- ⚠️ 若系统里还留着旧版 `MediaPlay.vst3` 或改名前的 `S-Rack.vst3`，请**手动删除**：它们与 `微音桥·播放器.vst3` 使用同一 VST3 class ID，宿主可能列出多个插件或加载到错误的包。
 
 ---
 
@@ -98,15 +98,15 @@ build.bat
 脚本用 Ninja 配置并构建 `VstMediaPlayer_VST3`、`VstMediaPlayer_Standalone`、`AudioDump`、`SepVerify`。产物位于 `build/VstMediaPlayer_artefacts/Release/`：
 
 ```
-Standalone/S-Rack.exe
-VST3/S-Rack.vst3/...
+Standalone/微音桥·播放器.exe
+VST3/微音桥·播放器.vst3/...
 AudioDump_artefacts/Release/AudioDump.exe
 SepVerify_artefacts/Release/SepVerify.exe
 ```
 
 POST_BUILD 步骤会把 `onnxruntime.dll`、`Kim_Vocal_2.onnx`、`vocals_weights.bin` 复制到 exe 同目录、VST3 包内以及系统 VST3 目录。
 
-> **为什么必须随包分发 ONNX Runtime**：部分系统的 `C:\Windows\System32\onnxruntime.dll` 是 1.5.2。静态导入若先解析到它，`GetApi(17)` 会返回空指针，首次构造 `Ort::Env` 就会让整个宿主崩溃。S-Rack 在创建任何模型前，用绝对路径把 ORT API 表重定向到随包分发的 1.17.1；即使重定向失败，也只是分离功能不可用，播放与宿主不受影响。
+> **为什么必须随包分发 ONNX Runtime**：部分系统的 `C:\Windows\System32\onnxruntime.dll` 是 1.5.2。静态导入若先解析到它，`GetApi(17)` 会返回空指针，首次构造 `Ort::Env` 就会让整个宿主崩溃。微音桥·播放器在创建任何模型前，用绝对路径把 ORT API 表重定向到随包分发的 1.17.1；即使重定向失败，也只是分离功能不可用，播放与宿主不受影响。
 
 ### 诊断日志
 
@@ -118,7 +118,7 @@ POST_BUILD 步骤会把 `onnxruntime.dll`、`Kim_Vocal_2.onnx`、`vocals_weights
 
 ```
 Source/                 插件处理器、单页编辑器、频谱、歌词、MF 解码、分离/导出/缓存
-Assets/                 S-Rack 图标 + generate_icon.py
+Assets/                 微音桥·播放器 图标 + generate_icon.py
 ThirdParty/             JUCE、ORT、kissfft、MDX 模型（不入库）
 Tools/                  AudioDump / SepVerify / 模型分析脚本与权重
 Tests/                  引擎测试与样例音频
@@ -127,7 +127,7 @@ CMakeLists.txt          构建定义（工程版本 1.0.0）
 build.bat               MSVC 环境 + 配置 + 构建
 ```
 
-内部 CMake target 仍叫 `VstMediaPlayer`，VST3 的 `PLUGIN_CODE` / `BUNDLE_ID` 也刻意保留旧值：VST3 靠 class ID 识别插件，这样产品改名为 S-Rack 后，宿主重新扫描仍能找回同一个插件。
+内部 CMake target 仍叫 `VstMediaPlayer`，VST3 的 `PLUGIN_CODE` / `BUNDLE_ID` 也刻意保留旧值：VST3 靠 class ID 识别插件，这样产品改名为「微音桥·播放器」后，宿主重新扫描仍能找回同一个插件。
 
 ---
 

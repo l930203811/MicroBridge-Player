@@ -4,12 +4,12 @@ project(SRack VERSION 1.0.0 LANGUAGES C CXX)
 
 add_subdirectory(ThirdParty/juce-8.0.15)
 
-# 品牌名 / 应用名统一为 S-Rack。
+# 品牌名 / 应用名统一为「微音桥·播放器」。
 # BUNDLE_ID 与 PLUGIN_CODE 刻意保留旧值：VST3 靠 class ID 识别插件，
 # 这样宿主里已保存的旧工程仍能在重新扫描后找回同一个插件。
-# target 名 VstMediaPlayer 也保留，仅作内部构建标识（build.bat / 产物目录不变）。
+# CMake project 名 SRack、target 名 VstMediaPlayer、图标资源文件名也保留，仅作内部构建标识。
 juce_add_plugin(VstMediaPlayer
-    PRODUCT_NAME "S-Rack"
+    PRODUCT_NAME "微音桥·播放器"
     COMPANY_NAME "SKCore"
     BUNDLE_ID "com.skcore.mediaplay"
     PLUGIN_MANUFACTURER_CODE Skcd
@@ -19,7 +19,7 @@ juce_add_plugin(VstMediaPlayer
     NEEDS_MIDI_INPUT FALSE
     COPY_PLUGIN_AFTER_BUILD TRUE
     VST3_CATEGORIES Fx
-    # Windows exe / VST3 bundle icon (JUCE generates icon.ico from these)
+    # Windows exe / VST3 bundle icon（文件名沿用旧 S-Rack-*，仅内部资源，非用户可见品牌）
     ICON_BIG "Assets/S-Rack-icon.png"
     ICON_SMALL "Assets/S-Rack-icon-small.png"
 )
@@ -73,7 +73,7 @@ target_include_directories(VstMediaPlayer PRIVATE
 target_link_libraries(VstMediaPlayer PRIVATE ${ORT_DIR}/lib/onnxruntime.lib)
 
 # 运行期部署：onnxruntime.dll 与模型随输出复制（Standalone exe 同目录 / VST3 bundle Contents\x86_64-win / 系统安装目录）
-set(VST3_INSTALL_DIR "C:/Program Files/Common Files/VST3/S-Rack.vst3/Contents/x86_64-win")
+set(VST3_INSTALL_DIR "C:/Program Files/Common Files/VST3/微音桥·播放器.vst3/Contents/x86_64-win")
 add_custom_command(TARGET VstMediaPlayer POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${ORT_DIR}/lib/onnxruntime.dll"
@@ -83,10 +83,10 @@ add_custom_command(TARGET VstMediaPlayer POST_BUILD
         "$<TARGET_FILE_DIR:VstMediaPlayer>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${ORT_DIR}/lib/onnxruntime.dll"
-        "$<TARGET_FILE_DIR:VstMediaPlayer>/../../VstMediaPlayer_artefacts/Release/VST3/S-Rack.vst3/Contents/x86_64-win"
+        "$<TARGET_FILE_DIR:VstMediaPlayer>/../../VstMediaPlayer_artefacts/Release/VST3/微音桥·播放器.vst3/Contents/x86_64-win"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/Kim_Vocal_2.onnx"
-        "$<TARGET_FILE_DIR:VstMediaPlayer>/../../VstMediaPlayer_artefacts/Release/VST3/S-Rack.vst3/Contents/x86_64-win"
+        "$<TARGET_FILE_DIR:VstMediaPlayer>/../../VstMediaPlayer_artefacts/Release/VST3/微音桥·播放器.vst3/Contents/x86_64-win"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${ORT_DIR}/lib/onnxruntime.dll"
         "${VST3_INSTALL_DIR}"
@@ -106,7 +106,7 @@ add_custom_command(TARGET VstMediaPlayer POST_BUILD
         "$<TARGET_FILE_DIR:VstMediaPlayer>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/Tools/vocals_weights.bin"
-        "$<TARGET_FILE_DIR:VstMediaPlayer>/../../VstMediaPlayer_artefacts/Release/VST3/S-Rack.vst3/Contents/x86_64-win"
+        "$<TARGET_FILE_DIR:VstMediaPlayer>/../../VstMediaPlayer_artefacts/Release/VST3/微音桥·播放器.vst3/Contents/x86_64-win"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/Tools/vocals_weights.bin"
         "${VST3_INSTALL_DIR}"

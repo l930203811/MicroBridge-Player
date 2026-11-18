@@ -1,4 +1,5 @@
 #include "VisualizerComponent.h"
+#include "SrTheme.h"
 
 //==============================================================================
 VisualizerComponent::VisualizerComponent (MediaPlayAudioProcessor& p)
@@ -70,14 +71,15 @@ void VisualizerComponent::setLevels (const float* newBars, int n, float low, flo
 //==============================================================================
 void VisualizerComponent::paint (juce::Graphics& g)
 {
+    sr::syncTheme();
     auto bounds = getLocalBounds().toFloat();
     const float w = bounds.getWidth();
     const float h = bounds.getHeight();
 
-    // ---------- 深青渐变背景（ZenFile 播放页底色） ----------
-    juce::ColourGradient bg (juce::Colour (0xff0c2d3a), 0.0f, 0.0f,
-                             juce::Colour (0xff06161f), 0.0f, h, false);
-    bg.addColour (0.55, juce::Colour (0xff092230));
+    // ---------- 渐变背景（随主题：深灰 / 淡蓝紫） ----------
+    juce::ColourGradient bg (sr::vizBg1, 0.0f, 0.0f,
+                             sr::vizBg2, 0.0f, h, false);
+    bg.addColour (0.55, sr::vizBgMid);
     g.setGradientFill (bg);
     g.fillRect (bounds);
 
@@ -86,7 +88,7 @@ void VisualizerComponent::paint (juce::Graphics& g)
     {
         const float bx = (b.x + 0.012f * std::sin ((float) timeAccum * 0.9f + b.phase)) * w;
         const float by = b.y * h;
-        g.setColour (juce::Colour (0xff29b6f6).withAlpha (b.alpha * 0.85f));
+        g.setColour (sr::accent.withAlpha (b.alpha * 0.85f));
         g.fillEllipse (bx - b.r, by - b.r, b.r * 2.0f, b.r * 2.0f);
         g.setColour (juce::Colours::white.withAlpha (b.alpha * 0.30f));
         g.fillEllipse (bx - b.r * 0.35f, by - b.r * 0.5f, b.r * 0.7f, b.r * 0.7f);
@@ -106,12 +108,12 @@ void VisualizerComponent::paint (juce::Graphics& g)
         g.addTransform (juce::AffineTransform::scale (1.0f, -1.0f).translated (0.0f, 2.0f * baseline));
         drawLedBars (g, w, barTop, baseline);
         g.restoreState();
-        g.setColour (juce::Colour (0xff082531).withAlpha (0.75f));
+        g.setColour (sr::vizReflect.withAlpha (0.75f));
         g.fillRect (0.0f, baseline + 1.0f, w, reflectH - 2.0f);
     }
 
     // ---------- 基线（进度条同款 accent 细线） ----------
-    g.setColour (juce::Colour (0xff29b6f6).withAlpha (0.55f));
+    g.setColour (sr::vizLine);
     g.fillRect (0.0f, baseline, w, 2.0f);
 }
 
@@ -127,9 +129,9 @@ void VisualizerComponent::drawLedBars (juce::Graphics& g, float w, float barTop,
     if (maxBar < 12.0f) return;
 
     // 高度渐变着色器：颜色只随 y 变化，所有柱共享「底绿顶红」
-    juce::ColourGradient vu (juce::Colour (0xff33d433), 0.0f, baseline,
-                             juce::Colour (0xffe4390e), 0.0f, barTop, false);
-    vu.addColour (0.6, juce::Colour (0xffeed500));
+    juce::ColourGradient vu (sr::green, 0.0f, baseline,
+                             sr::red, 0.0f, barTop, false);
+    vu.addColour (0.6, sr::yellow);
     g.setGradientFill (vu);
 
     const float segPitch = 5.0f;

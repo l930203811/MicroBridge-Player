@@ -2,7 +2,7 @@
 
 namespace
 {
-// 与 S-Rack 应用图标同款视觉的矢量 mini logo：
+// 与「微音桥·播放器」应用图标同款视觉的矢量 mini logo：
 // 深蓝圆角方 + 机架细环 + 大号白色 S + 底部绿黄红 LED 频谱
 void drawMiniAppIcon (juce::Graphics& g, juce::Rectangle<float> b)
 {
@@ -58,6 +58,7 @@ MediaPlayAudioProcessorEditor::MediaPlayAudioProcessorEditor (MediaPlayAudioProc
       sepStatus (p), offsetPopup (p), volumePopup (p), modePopup (p), sourcePopup (p)
 {
     setOpaque (true);
+    sr::syncTheme();   // 构造期先备好当前主题的色板，供 Label 等静态取色使用
     setLookAndFeel (&lookAndFeel);
     addMouseListener (&dismissListener, true);   // 监听所有子组件点击：点击弹窗外收起
 
@@ -109,6 +110,17 @@ MediaPlayAudioProcessorEditor::MediaPlayAudioProcessorEditor (MediaPlayAudioProc
         applyLanguage();
     };
 
+    // 深 / 浅主题切换：对齐 MicroBridge 播放器的 Studio One 深灰 / 淡蓝紫浅色。
+    // 颜色全部在 paint 入口实时读取 sr::，这里只需翻转开关并全局 repaint。
+    addAndMakeVisible (themeBtn);
+    themeBtn.onClick = [this]
+    {
+        sr::toggle();
+        lastTheme = sr::get();
+        applyTheme();
+        processorRef.setUiTheme (sr::get());   // 随宿主工程持久化
+    };
+
     // 「原声」输出源切换：未分离时置灰不可点；已分离点击向上弹出三选项。
     addAndMakeVisible (sourceBtn);
     sourceBtn.onClick = [this]
@@ -132,8 +144,8 @@ MediaPlayAudioProcessorEditor::MediaPlayAudioProcessorEditor (MediaPlayAudioProc
         MediaPlayAudioProcessor::outputSourceName (processorRef.getOutputSource()));
 
     // 侧边栏：当前曲目 + 分离状态（完整路径在主区状态条里，鼠标悬停也有 tooltip）
-    trackLabel.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 10.5f, juce::Font::plain)));
-    trackLabel.setColour (juce::Label::textColourId, juce::Colour (0xff9dc0d0));
+    trackLabel.setFont (sr::font (10.5f));
+    trackLabel.setColour (juce::Label::textColourId, sr::dim);
     trackLabel.setJustificationType (juce::Justification::topLeft);
     addAndMakeVisible (trackLabel);
 
@@ -241,8 +253,8 @@ MediaPlayAudioProcessorEditor::MediaPlayAudioProcessorEditor (MediaPlayAudioProc
     };
 
     // 时间 / 进度
-    timeLabel.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 12.5f, juce::Font::plain)));
-    timeLabel.setColour (juce::Label::textColourId, juce::Colour (0xffcfe3ee));
+    timeLabel.setFont (sr::font (12.5f));
+    timeLabel.setColour (juce::Label::textColourId, sr::text);
     timeLabel.setText ("00:00 / 00:00", juce::dontSendNotification);
     addAndMakeVisible (timeLabel);
 
@@ -261,18 +273,21 @@ MediaPlayAudioProcessorEditor::MediaPlayAudioProcessorEditor (MediaPlayAudioProc
     };
     addAndMakeVisible (seekSlider);
 
-    // 标题
-    // 15pt：中文「S-Rack_媒体播放」与英文「S-Rack_Media Play」在 150px 内都能完整显示
-    appTitle.setFont (juce::Font (juce::FontOptions ("Microsoft YaHei UI", 15.0f, juce::Font::bold)));
-    appTitle.setColour (juce::Label::textColourId, juce::Colours::white);
+    // 标题：品牌名不随界面语言切换，中英文模式下都显示「微音桥·播放器」
+    // 15pt 下约 105px，在 150px 内可完整显示
+    appTitle.setFont (sr::font (15.0f, true));
+    appTitle.setColour (juce::Label::textColourId, sr::text);
     addAndMakeVisible (appTitle);
 
-    setSize (760, 560);
+    // 与 MicroBridge 音频播放器窗口同宽（842×560），可缩放；下限 702×480。
+    // 布局全部按 getWidth()/getHeight() 推导，不是写死 760。
+    setResizeLimits (702, 480, 3200, 1800);
+    setSize (842, 560);
     applyTab();        // 单一页面：设置控件可见性与初始禁用状态
     applyLanguage();   // 所有控件注册完毕后再按当前语言统一重建文案
     startTimer (33);   // ~30fps
 
-    MediaPlayAudioProcessor::debugLog ("=== S-Rack editor opened (single page + separation) ===");
+    MediaPlayAudioProcessor::debugLog ("=== 微音桥·播放器 editor opened (single page + separation) ===");
 }
 
 MediaPlayAudioProcessorEditor::~MediaPlayAudioProcessorEditor()
@@ -282,12 +297,12 @@ MediaPlayAudioProcessorEditor::~MediaPlayAudioProcessorEditor()
 
 //==============================================================================
 // 独立运行版窗口标题（机架 / DAW 里标题由宿主添加前缀，此处不影响宿主行为）
-// 品牌名不随界面语言变化，中英文模式下都显示 S-Rack。
+// 品牌名不随界面语言变化，中英文模式下都显示「微音桥·播放器」。
 void MediaPlayAudioProcessorEditor::applyWindowTitle()
 {
     if (auto* w = findParentComponentOfClass<juce::DocumentWindow>())
     {
-        const juce::String title ("S-Rack");
+        const juce::String title (juce::CharPointer_UTF8 ("微音桥·播放器"));
         if (w->getName() != title)
             w->setName (title);
     }
@@ -333,6 +348,10 @@ void MediaPlayAudioProcessorEditor::applyLanguage()
     bypassBtn.setButtonText   (MediaPlayAudioProcessor::zh ("旁通"));
     langBtn.setButtonText     (MediaPlayAudioProcessor::zh ("中 / EN"));
     langBtn.setToggleState    (en, juce::dontSendNotification);
+    // 按钮显示的是「点击后将切换到的主题」：当前深色 → 显示「浅色」
+    themeBtn.setButtonText    (sr::isDark() ? MediaPlayAudioProcessor::zh ("浅色")
+                                            : MediaPlayAudioProcessor::zh ("深色"));
+    lastTheme  = sr::get();
     sourceBtn.setButtonText   (MediaPlayAudioProcessor::outputSourceName (processorRef.getOutputSource()));
     spectrumBtn.setButtonText (MediaPlayAudioProcessor::zh ("频谱"));
     lyricBtn.setButtonText    (MediaPlayAudioProcessor::zh ("歌词"));
@@ -340,7 +359,7 @@ void MediaPlayAudioProcessorEditor::applyLanguage()
     volumeBtn.setButtonText   (MediaPlayAudioProcessor::zh ("音量"));
     modeBtn.setButtonText     (MediaPlayAudioProcessor::playModeName (processorRef.getPlayMode()));
 
-    appTitle.setText (MediaPlayAudioProcessor::zh ("S-Rack_媒体播放"), juce::dontSendNotification);
+    appTitle.setText (juce::String (juce::CharPointer_UTF8 ("微音桥·播放器")), juce::dontSendNotification);
 
     // 清空节流缓存：下一次 ~4Hz 刷新立刻用新语言重建动态文本
     lastSepBtnText = {};
@@ -360,11 +379,35 @@ void MediaPlayAudioProcessorEditor::applyLanguage()
 }
 
 //==============================================================================
+// 主题切换：色板在 paint 入口已实时读取，这里只需刷新主题按钮文案 + 全局重绘。
+void MediaPlayAudioProcessorEditor::applyTheme()
+{
+    sr::syncTheme();
+    lastTheme = sr::get();
+    themeBtn.setButtonText (sr::isDark() ? MediaPlayAudioProcessor::zh ("浅色")
+                                         : MediaPlayAudioProcessor::zh ("深色"));
+    // Label 的颜色是构造期捕获的，切主题须手动重设
+    appTitle.setColour   (juce::Label::textColourId, sr::text);
+    trackLabel.setColour (juce::Label::textColourId, sr::dim);
+    timeLabel.setColour  (juce::Label::textColourId, sr::text);
+    offsetPopup.repaint();
+    volumePopup.repaint();
+    modePopup.repaint();
+    sourcePopup.repaint();
+    sepStatus.repaint();
+    playlistBox.repaint();
+    lyricsOverlay.repaint();
+    visualizer.repaint();
+    repaint();
+}
+
+//==============================================================================
 void MediaPlayAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    // 侧边栏背景
-    g.fillAll (juce::Colour (0xff0a222d));
-    g.setColour (juce::Colour (0xff05121a));
+    sr::syncTheme();
+    // 侧边栏背景（随主题：深灰 / 淡蓝紫）
+    g.fillAll (sr::sidebarBg);
+    g.setColour (sr::sidebarEdge);
     g.fillRect (0, 0, 4, getHeight());
 
     // 左上角 logo：与 exe 应用图标同款（深蓝圆角方 + 播放圆盘 + 绿黄红 LED 频谱）
@@ -376,22 +419,26 @@ void MediaPlayAudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
 
-    // 最右上角：「中 / EN」与「旁通」并排同一行（与顶部状态条同高）。
-    // 两个按钮从右侧留 16px 边距向左侧排布，中间 6px 间距；状态条右缘给它们让位。
+    // 最右上角：「主题」「中 / EN」「旁通」三个按钮并排同一行（与顶部状态条同高）。
+    // 从右侧留 16px 边距向左侧排布，中间 6px 间距；状态条右缘给它们让位。
     const int mainX = 200;
     const int mainW = area.getWidth() - mainX;
     constexpr int hdrBtnW = 72, hdrBtnGap = 6, hdrBtnY = 3, hdrBtnH = 28;
     const int hdrRight = area.getWidth() - 16;
-    const int hdrLeft  = hdrRight - hdrBtnW * 2 - hdrBtnGap;
-    langBtn.setBounds   (hdrLeft, hdrBtnY, hdrBtnW, hdrBtnH);
-    bypassBtn.setBounds (hdrLeft + hdrBtnW + hdrBtnGap, hdrBtnY, hdrBtnW, hdrBtnH);
+    // 三按钮从右往左：旁通 → 语言 → 主题
+    const int hdrLeft  = hdrRight - hdrBtnW * 3 - hdrBtnGap * 2;
+    bypassBtn.setBounds (hdrRight - hdrBtnW, hdrBtnY, hdrBtnW, hdrBtnH);
+    langBtn.setBounds   (hdrRight - hdrBtnW * 2 - hdrBtnGap, hdrBtnY, hdrBtnW, hdrBtnH);
+    themeBtn.setBounds  (hdrLeft, hdrBtnY, hdrBtnW, hdrBtnH);
 
-    // 主区（x=200..760, y=0..486）：频谱铺底，顶部悬浮分离状态条，歌词浮层在最上
-    visualizer.setBounds (mainX, 0, mainW, 486);
+    // 主区（x=200..右缘，y=0..底部传输区之上）：频谱铺底，顶部悬浮分离状态条，
+    // 歌词浮层压在频谱倒影区。纵向尺寸从窗口底部反推，缩放时底部控件不会被挤出。
+    const int mainH = juce::jmax (180, area.getHeight() - 74);
+    visualizer.setBounds (mainX, 0, mainW, mainH);
     sepStatus.setBounds (mainX + 8, 2,
                          juce::jmax (120, hdrLeft - 10 - (mainX + 8)), 34);
-    // 歌词浮层加高到 96px（390..486，正好落在频谱倒影区），两行才能拉开净空不重叠
-    lyricsOverlay.setBounds (216, 390, mainW - 16, 96);
+    // 歌词浮层 96px 高，正好落在频谱倒影区，两行拉开净空不重叠
+    lyricsOverlay.setBounds (mainX + 16, mainH - 96, mainW - 16, 96);
 
     // 侧边栏（频谱左侧）：标题 / 导入音频 / 分离音频 / 曲目状态 / 播放模式 / 列表
     // 旁通已迁到右上角，与「中 / EN」同排；空出的高度还给多行曲目状态。
@@ -403,21 +450,25 @@ void MediaPlayAudioProcessorEditor::resized()
     modeBtn.setBounds    (12, 222, 176, 26);
     playlistBox.setBounds (12, 252, 176, area.getHeight() - 252 - 12);
 
-    // 底部传输区：时间 / 进度条 / 传输按钮
-    const int rightEdge = area.getWidth() - 16;   // 744
-    timeLabel.setBounds  (216, 486, 220, 14);
-    seekSlider.setBounds (216, 502, rightEdge - 216, 16);
-    prevBtn.setBounds (216, 520, 34, 34);
-    playBtn.setBounds (266, 516, 42, 42);
-    nextBtn.setBounds (324, 520, 34, 34);   // 右缘 358
+    // 底部传输区：时间 / 进度条 / 传输按钮，全部从窗口底边反推
+    const int rightEdge = area.getWidth() - 16;
+    const int bottomY   = area.getHeight();
+    const int timeY     = bottomY - 74;
+    const int transportY = bottomY - 40;
+    timeLabel.setBounds  (216, timeY, 220, 14);
+    seekSlider.setBounds (216, timeY + 16, rightEdge - 216, 16);
+    prevBtn.setBounds (216, transportY + 4, 34, 34);
+    playBtn.setBounds (266, transportY,     42, 42);
+    nextBtn.setBounds (324, transportY + 4, 34, 34);
 
     // 底部按钮组（从右往左）：音量 / 偏移 / 歌词 / 频谱 / 输出源
-    // 「中 / EN」与「旁通」已迁到窗口最右上角，底部不再占用位置。
-    volumeBtn.setBounds   (rightEdge - 56, 522, 56, 28);                  // 688
-    offsetBtn.setBounds   (volumeBtn.getX() - 4 - 48, 522, 48, 28);        // 636
-    lyricBtn.setBounds    (offsetBtn.getX() - 4 - 48, 522, 48, 28);        // 584
-    spectrumBtn.setBounds (lyricBtn.getX() - 4 - 48, 522, 48, 28);         // 532
-    sourceBtn.setBounds   (spectrumBtn.getX() - 4 - 76, 522, 76, 28);      // 452
+    // 「主题」「中 / EN」「旁通」已迁到窗口最右上角，底部不再占用位置。
+    const int rowY = bottomY - 38;
+    volumeBtn.setBounds   (rightEdge - 56, rowY, 56, 28);
+    offsetBtn.setBounds   (volumeBtn.getX() - 4 - 48, rowY, 48, 28);
+    lyricBtn.setBounds    (offsetBtn.getX() - 4 - 48, rowY, 48, 28);
+    spectrumBtn.setBounds (lyricBtn.getX() - 4 - 48, rowY, 48, 28);
+    sourceBtn.setBounds   (spectrumBtn.getX() - 4 - 76, rowY, 76, 28);
 
     // 向上弹窗：宽度与触发按钮完全一致、底边贴住按钮上沿
     const auto placePopup = [] (juce::Component& popup, const juce::Component& btn, int h)
@@ -433,9 +484,11 @@ void MediaPlayAudioProcessorEditor::resized()
 //==============================================================================
 void MediaPlayAudioProcessorEditor::timerCallback()
 {
-    // 语言可能由用户点击或宿主恢复状态改变；统一在这里检测并刷新全部文案
+    // 语言 / 主题可能由用户点击或宿主恢复状态改变；统一在这里检测并刷新
     if (MediaPlayAudioProcessor::getUiLanguage() != lastLanguage)
         applyLanguage();
+    if (sr::get() != lastTheme)
+        applyTheme();
     const bool bypassNow = processorRef.getBypassed();
     if (bypassBtn.getToggleState() != bypassNow)
         bypassBtn.setToggleState (bypassNow, juce::dontSendNotification);

@@ -108,6 +108,8 @@ void MediaPlayAudioProcessor::getStateInformation (juce::MemoryBlock& dest)
     xml.setAttribute ("uiTab", uiTab.load (std::memory_order_relaxed));
     // 界面语言随宿主工程保存；老工程没有该属性时回落默认中文
     xml.setAttribute ("lang", L10n::get());
+    // 界面主题随宿主工程保存；老工程没有该属性时回落默认深色
+    xml.setAttribute ("uiTheme", sr::get());
 
     auto* list = xml.createNewChildElement ("Playlist");
     for (const auto& f : playlist)
@@ -157,7 +159,8 @@ void MediaPlayAudioProcessor::setStateInformation (const void* data, int sizeInB
     bypassed.store (xml->getBoolAttribute ("bypassed", false), std::memory_order_relaxed);
     setUiTab (xml->getIntAttribute ("uiTab", 2));
     L10n::set (xml->getIntAttribute ("lang", 0));
-    // 编辑器可能先于宿主恢复状态就已构造：timerCallback 会检测语言变化并刷新全部文案
+    sr::set (xml->getIntAttribute ("uiTheme", 0));
+    // 编辑器可能先于宿主恢复状态就已构造：timerCallback 会检测语言 / 主题变化并刷新全部文案
 
     // 歌词偏移表先于恢复曲目解析，loadTrack 时才能应用
     lyricOffsets.clear();

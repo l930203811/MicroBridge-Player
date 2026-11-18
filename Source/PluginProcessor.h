@@ -10,6 +10,7 @@
 #include "AiExporter.h"
 #include "VocalCache.h"
 #include "Localization.h"
+#include "SrTheme.h"
 
 class MediaPlayAudioProcessor : public juce::AudioProcessor, private juce::Timer
 {
@@ -31,6 +32,11 @@ public:
     static int  getUiLanguage()       { return L10n::get(); }
     static void setUiLanguage (int l) { L10n::set (l); }
     static bool isEnglish()           { return L10n::isEnglish(); }
+
+    //===== 界面主题（0=深色 默认，1=浅色）=====
+    // 转发给 sr:: 进程级开关（定义见 SrTheme.h）；宿主状态持久化在 cpp 里完成。
+    static int  getUiTheme()    { return sr::get(); }
+    static void setUiTheme (int t) { sr::set (t); }
 
     // 临时诊断日志（设置 MEDIAPLAY_LOG 环境变量后启用，定位无声问题用）
     static void debugLog (const juce::String& s);
@@ -63,7 +69,7 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
     // 宿主插件列表里显示的产品名（品牌名，不随界面语言变化）
-    const juce::String getName() const override { return juce::String ("S-Rack"); }
+    const juce::String getName() const override { return juce::String (juce::CharPointer_UTF8 ("微音桥·播放器")); }
     bool acceptsMidi() const override { return false; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }

@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 //==============================================================================
-// S-Rack 轻量 UI 双语层（默认简体中文，可一键切 English）。
+// 微音桥·播放器 轻量 UI 双语层（默认简体中文，可一键切 English）。
 //
 // 所有界面文字统一经 MediaPlayAudioProcessor::zh() 构造：中文模式原样返回，
 // 英文模式按下面的白名单替换。白名单之外的字符串保持中文，这是刻意的：
@@ -38,7 +38,6 @@ namespace L10n
             // ---- 产品 / 标题 ----
             { "媒体播放",                       "Media Play" },
             { "媒体播放器",                     "Media Player" },
-            { "S-Rack_媒体播放",                "S-Rack_Media Play" },
 
             // ---- 侧边栏 / 主按钮 ----
             { "导入音频",                       "Import Audio" },
@@ -48,6 +47,8 @@ namespace L10n
             { "重新分离",                       "Re-separate" },
             { "旁通",                           "Bypass" },
             { "旁通中 · 仅透传宿主输入",        "Bypassed · host input only" },
+            { "浅色",                           "Light" },
+            { "深色",                           "Dark" },
 
             // ---- 输出源 / 播放模式 ----
             { "原声",                           "Original" },
