@@ -40,8 +40,8 @@
 
 | 资产 | 内容 |
 |---|---|
-| `微音桥·播放器-Standalone-v1.0.1-win64.zip` | `微音桥·播放器.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
-| `微音桥·播放器-VST3-v1.0.1-win64.zip` | `微音桥·播放器.vst3` 包（已内含 DLL、模型与权重） |
+| `MicroBridge-Player-Standalone-v1.0.1-win64.zip` | `微音桥·播放器.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
+| `MicroBridge-Player-VST3-v1.0.1-win64.zip` | `微音桥·播放器.vst3` 包（已内含 DLL、模型与权重） |
 
 见 [Releases](../../releases)。
 

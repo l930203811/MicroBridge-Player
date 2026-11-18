@@ -40,8 +40,8 @@ Release assets are published separately so you only install what you need:
 
 | Asset | Contents |
 |---|---|
-| `微音桥·播放器-Standalone-v1.0.1-win64.zip` | `微音桥·播放器.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
-| `微音桥·播放器-VST3-v1.0.1-win64.zip` | `微音桥·播放器.vst3` bundle (already contains the DLL, model and weights) |
+| `MicroBridge-Player-Standalone-v1.0.1-win64.zip` | `微音桥·播放器.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
+| `MicroBridge-Player-VST3-v1.0.1-win64.zip` | `微音桥·播放器.vst3` bundle (already contains the DLL, model and weights) |
 
 See [Releases](../../releases).
 
