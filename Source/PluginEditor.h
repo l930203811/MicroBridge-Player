@@ -1340,7 +1340,7 @@ private:
     juce::Label timeLabel;
     juce::Slider seekSlider { juce::Slider::LinearHorizontal, juce::Slider::NoTextBox };
 
-    juce::Label appTitle { {}, juce::String (juce::CharPointer_UTF8 ("微音桥·播放器")) };
+    juce::Label appTitle { {}, juce::String ("MicroBridge Player") };
 
     PlayerLookAndFeel lookAndFeel;
     std::unique_ptr<juce::FileChooser> fileChooser;

@@ -69,7 +69,7 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
     // 宿主插件列表里显示的产品名（品牌名，不随界面语言变化）
-    const juce::String getName() const override { return juce::String (juce::CharPointer_UTF8 ("微音桥·播放器")); }
+    const juce::String getName() const override { return juce::String ("MicroBridge Player"); }
     bool acceptsMidi() const override { return false; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }

@@ -2,7 +2,7 @@
 
 namespace
 {
-// 与「微音桥·播放器」应用图标同款视觉的矢量 mini logo：
+// 与「MicroBridge Player」应用图标同款视觉的矢量 mini logo：
 // 深蓝圆角方 + 机架细环 + 大号白色 S + 底部绿黄红 LED 频谱
 void drawMiniAppIcon (juce::Graphics& g, juce::Rectangle<float> b)
 {
@@ -273,9 +273,9 @@ MediaPlayAudioProcessorEditor::MediaPlayAudioProcessorEditor (MediaPlayAudioProc
     };
     addAndMakeVisible (seekSlider);
 
-    // 标题：品牌名不随界面语言切换，中英文模式下都显示「微音桥·播放器」
-    // 15pt 下约 105px，在 150px 内可完整显示
-    appTitle.setFont (sr::font (15.0f, true));
+    // 标题：品牌名不随界面语言切换，中英文模式下都显示「MicroBridge Player」
+    // 英文 18 字符，14pt 下约 132px，在 150px 内可完整显示（侧栏右缘 200px）
+    appTitle.setFont (sr::font (14.0f, true));
     appTitle.setColour (juce::Label::textColourId, sr::text);
     addAndMakeVisible (appTitle);
 
@@ -287,7 +287,7 @@ MediaPlayAudioProcessorEditor::MediaPlayAudioProcessorEditor (MediaPlayAudioProc
     applyLanguage();   // 所有控件注册完毕后再按当前语言统一重建文案
     startTimer (33);   // ~30fps
 
-    MediaPlayAudioProcessor::debugLog ("=== 微音桥·播放器 editor opened (single page + separation) ===");
+    MediaPlayAudioProcessor::debugLog ("=== MicroBridge Player editor opened (single page + separation) ===");
 }
 
 MediaPlayAudioProcessorEditor::~MediaPlayAudioProcessorEditor()
@@ -297,12 +297,12 @@ MediaPlayAudioProcessorEditor::~MediaPlayAudioProcessorEditor()
 
 //==============================================================================
 // 独立运行版窗口标题（机架 / DAW 里标题由宿主添加前缀，此处不影响宿主行为）
-// 品牌名不随界面语言变化，中英文模式下都显示「微音桥·播放器」。
+// 品牌名不随界面语言变化，中英文模式下都显示「MicroBridge Player」。
 void MediaPlayAudioProcessorEditor::applyWindowTitle()
 {
     if (auto* w = findParentComponentOfClass<juce::DocumentWindow>())
     {
-        const juce::String title (juce::CharPointer_UTF8 ("微音桥·播放器"));
+        const juce::String title ("MicroBridge Player");
         if (w->getName() != title)
             w->setName (title);
     }
@@ -359,7 +359,7 @@ void MediaPlayAudioProcessorEditor::applyLanguage()
     volumeBtn.setButtonText   (MediaPlayAudioProcessor::zh ("音量"));
     modeBtn.setButtonText     (MediaPlayAudioProcessor::playModeName (processorRef.getPlayMode()));
 
-    appTitle.setText (juce::String (juce::CharPointer_UTF8 ("微音桥·播放器")), juce::dontSendNotification);
+    appTitle.setText (juce::String ("MicroBridge Player"), juce::dontSendNotification);
 
     // 清空节流缓存：下一次 ~4Hz 刷新立刻用新语言重建动态文本
     lastSepBtnText = {};

@@ -1,17 +1,17 @@
-# MicroBridge Player (微音桥·播放器)
+# MicroBridge Player
 
 **English** · [简体中文](README.zh-CN.md)
 
 > **v1.0.1** · Windows x64 · VST3 effect plugin + standalone player · JUCE 8 / C++17
 
-![微音桥·播放器 English UI (v1.0.0)](docs/screenshot-en.png)
+![MicroBridge Player English UI (v1.0.0)](docs/screenshot-en.png)
 
 [简体中文界面截图](docs/screenshot-zh-CN.png)
 
-MicroBridge Player (微音桥·播放器) is a cyberpunk-styled music player that ships in two forms:
+MicroBridge Player is a cyberpunk-styled music player that ships in two forms:
 
 - **VST3 plugin** — load it on any track in a DAW / rack host (classified as `Fx`).
-- **Standalone app** — double-click `微音桥·播放器.exe`, no host required.
+- **Standalone app** — double-click `MicroBridge Player.exe`, no host required.
 
 Both contain the same player, the same MDX-Net separation engine, and bundle their own runtime dependencies.
 
@@ -40,16 +40,16 @@ Release assets are published separately so you only install what you need:
 
 | Asset | Contents |
 |---|---|
-| `MicroBridge-Player-Standalone-v1.0.1-win64.zip` | `微音桥·播放器.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
-| `MicroBridge-Player-VST3-v1.0.1-win64.zip` | `微音桥·播放器.vst3` bundle (already contains the DLL, model and weights) |
+| `MicroBridge-Player-Standalone-v1.0.1-win64.zip` | `MicroBridge Player.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
+| `MicroBridge-Player-VST3-v1.0.1-win64.zip` | `MicroBridge Player.vst3` bundle (already contains the DLL, model and weights) |
 
 See [Releases](../../releases).
 
 ### Install
 
-- **Standalone**: unzip anywhere and run `微音桥·播放器.exe`. In the audio settings, pick the correct output device.
-- **VST3**: copy the whole `微音桥·播放器.vst3` folder to `C:\Program Files\Common Files\VST3\`, then rescan plugins in your host. The build script does this automatically.
-- ⚠️ If a legacy `MediaPlay.vst3` or pre-rename `S-Rack.vst3` is still present, **delete it**. They share the same VST3 class ID as `微音桥·播放器.vst3` and may appear as duplicates or cause hosts to load the wrong bundle.
+- **Standalone**: unzip anywhere and run `MicroBridge Player.exe`. In the audio settings, pick the correct output device.
+- **VST3**: copy the whole `MicroBridge Player.vst3` folder to `C:\Program Files\Common Files\VST3\`, then rescan plugins in your host. The build script does this automatically.
+- ⚠️ If legacy `MediaPlay.vst3`, `S-Rack.vst3` or the old Chinese-named `微音桥·播放器.vst3` is still present, **delete it**. They share the same VST3 class ID as `MicroBridge Player.vst3`, may appear as duplicates, and the old Chinese name shows garbled text during host scans (this is why the product name is now ASCII).
 
 ---
 
@@ -100,8 +100,8 @@ build.bat
 It configures with Ninja and builds `VstMediaPlayer_VST3`, `VstMediaPlayer_Standalone`, `AudioDump` and `SepVerify`. Outputs land in `build/VstMediaPlayer_artefacts/Release/`:
 
 ```
-Standalone/微音桥·播放器.exe
-VST3/微音桥·播放器.vst3/...
+Standalone/MicroBridge Player.exe
+VST3/MicroBridge Player.vst3/...
 AudioDump_artefacts/Release/AudioDump.exe
 SepVerify_artefacts/Release/SepVerify.exe
 ```
