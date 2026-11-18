@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-> **v1.0.0** · Windows x64 · VST3 效果器插件 + 独立播放器 · JUCE 8 / C++17
+> **v1.0.1** · Windows x64 · VST3 效果器插件 + 独立播放器 · JUCE 8 / C++17
 
 ![微音桥·播放器 简体中文界面（v1.0.0）](docs/screenshot-zh-CN.png)
 
@@ -40,8 +40,8 @@
 
 | 资产 | 内容 |
 |---|---|
-| `微音桥·播放器-Standalone-v1.0.0-win64.zip` | `微音桥·播放器.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
-| `微音桥·播放器-VST3-v1.0.0-win64.zip` | `微音桥·播放器.vst3` 包（已内含 DLL、模型与权重） |
+| `微音桥·播放器-Standalone-v1.0.1-win64.zip` | `微音桥·播放器.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
+| `微音桥·播放器-VST3-v1.0.1-win64.zip` | `微音桥·播放器.vst3` 包（已内含 DLL、模型与权重） |
 
 见 [Releases](../../releases)。
 
@@ -123,7 +123,7 @@ ThirdParty/             JUCE、ORT、kissfft、MDX 模型（不入库）
 Tools/                  AudioDump / SepVerify / 模型分析脚本与权重
 Tests/                  引擎测试与样例音频
 docs/                   界面截图（中文 / 英文 + 早期版本）
-CMakeLists.txt          构建定义（工程版本 1.0.0）
+CMakeLists.txt          构建定义（工程版本 1.0.1）
 build.bat               MSVC 环境 + 配置 + 构建
 ```
 
