@@ -133,4 +133,8 @@ build.bat               MSVC 环境 + 配置 + 构建
 
 ## 许可
 
-仅供学习交流使用。
+Copyright (C) 2026 SKCore。
+
+本项目采用 **GNU 通用公共许可证 v3.0（GPL v3）**，完整条款见 [`LICENSE`](LICENSE) 文件。
+你可以依据 GPL v3 自由使用、修改与再分发。随包分发的第三方组件（JUCE、ONNX Runtime、
+MDX-Net 模型权重）各有独立许可，分发二进制前请自行核对。
