@@ -138,7 +138,13 @@ The internal CMake target is still named `VstMediaPlayer` and the VST3 `PLUGIN_C
 
 Copyright (C) 2026 SKCore.
 
-This project is licensed under the **GNU General Public License v3.0** — see the
-[`LICENSE`](LICENSE) file for the full text. You may redistribute and modify it under
-the terms of the GPL v3. Bundled third-party components (JUCE, ONNX Runtime, MDX-Net
-model weights) carry their own licences; review those terms before redistributing binaries.
+This project is licensed under the **GNU Affero General Public License v3.0
+(AGPLv3)** — see the [`LICENSE`](LICENSE) file for the full text. AGPLv3 is used
+because the project is built on JUCE 8, whose open-source licence is AGPLv3.
+
+You may redistribute and modify it under the terms of the AGPLv3. Bundled
+third-party components (JUCE, ONNX Runtime, kissfft, MDX-Net model weights)
+carry their own licences — see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
+before redistributing binaries. Note that the bundled model weights have
+unverified redistribution rights. Closed-source distribution requires a
+commercial JUCE licence.
