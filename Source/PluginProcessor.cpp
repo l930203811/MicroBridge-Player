@@ -103,6 +103,7 @@ void MediaPlayAudioProcessor::getStateInformation (juce::MemoryBlock& dest)
     xml.setAttribute ("currentTrack", currentTrack);
     xml.setAttribute ("position", currentSeconds.load (std::memory_order_relaxed));
     xml.setAttribute ("lyricsOn", lyricsOn.load (std::memory_order_relaxed));
+    xml.setAttribute ("desktopLyricsOn", desktopLyricsOn.load (std::memory_order_relaxed));
     xml.setAttribute ("spectrumOn", spectrumOn.load (std::memory_order_relaxed));
     xml.setAttribute ("bypassed", bypassed.load (std::memory_order_relaxed));
     xml.setAttribute ("uiTab", uiTab.load (std::memory_order_relaxed));
@@ -155,6 +156,7 @@ void MediaPlayAudioProcessor::setStateInformation (const void* data, int sizeInB
     gain.store ((float) xml->getDoubleAttribute ("volume", 0.8), std::memory_order_relaxed);
     inputThru.store (xml->getBoolAttribute ("inputThru", true), std::memory_order_relaxed);
     lyricsOn.store (xml->getBoolAttribute ("lyricsOn", true), std::memory_order_relaxed);
+    desktopLyricsOn.store (xml->getBoolAttribute ("desktopLyricsOn", false), std::memory_order_relaxed);
     spectrumOn.store (xml->getBoolAttribute ("spectrumOn", true), std::memory_order_relaxed);
     bypassed.store (xml->getBoolAttribute ("bypassed", false), std::memory_order_relaxed);
     setUiTab (xml->getIntAttribute ("uiTab", 2));

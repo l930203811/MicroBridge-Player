@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "SrTheme.h"
+#include "DesktopLyrics.h"
 #include "VisualizerComponent.h"
 #include "StemPanel.h"
 
@@ -327,7 +328,7 @@ public:
         sr::syncTheme();
         auto& lyr = proc.getLyrics();
 
-        // 歌词已开启（本浮层仅在开启时可见），但未匹配到同名 .lrc 时，
+        // 歌词已开启（本浮层仅在开启时可见），但未匹配到同名 .lrc 且音频无内嵌歌词时，
         // 在歌词区直接给出中/英文提示，避免「开了歌词却一片空白」的困惑。
         if (! lyr.isLoaded())
         {
@@ -342,7 +343,7 @@ public:
                             juce::Justification::centred);
                 g.setColour (sr::faint);
                 g.setFont (sr::font (10.5f));
-                g.drawText (MediaPlayAudioProcessor::zh ("把同名 .lrc 放到歌曲同目录"),
+                g.drawText (MediaPlayAudioProcessor::zh ("支持同名 .lrc 或音频内嵌歌词"),
                             juce::Rectangle<float> (0.0f, b.getY() + b.getHeight() * 0.52f, b.getWidth(), b.getHeight() * 0.48f),
                             juce::Justification::centred);
             }
@@ -1291,6 +1292,12 @@ private:
     void applyTheme();
 
     MediaPlayAudioProcessor& processorRef;
+
+    // 桌面歌词：独立顶层窗口（addToDesktop），开关按钮在播放器右上角；
+    // 每帧由 pushDesktopLyrics() 喂入当前行/配色，关闭按钮置回开关态。
+    void pushDesktopLyrics();
+    std::unique_ptr<DesktopLyricsWindow> desktopLyrics_;
+    PillButton desktopLyricsBtn { MediaPlayAudioProcessor::zh ("桌面歌词"), true };
 
     // 已整合为单一「音频播放」页：频谱 + 歌词 + 分离状态条，默认即显示。
     // 混音台 / AI 批量面板不再挂载、也不再在定时器里刷新（宿主 UI 线程零负担）。

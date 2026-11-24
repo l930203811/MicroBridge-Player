@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-> **v1.0.1** · Windows x64 · VST3 effect plugin + standalone player · JUCE 8 / C++17
+> **v1.1.0** · Windows x64 · VST3 effect plugin + standalone player · JUCE 8 / C++17
 
 ![MicroBridge Player English UI (v1.0.0)](docs/screenshot-en.png)
 
@@ -40,8 +40,8 @@ Release assets are published separately so you only install what you need:
 
 | Asset | Contents |
 |---|---|
-| `MicroBridge-Player-Standalone-v1.0.1-win64.zip` | `MicroBridge Player.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
-| `MicroBridge-Player-VST3-v1.0.1-win64.zip` | `MicroBridge Player.vst3` bundle (already contains the DLL, model and weights) |
+| `MicroBridge-Player-Standalone-v1.1.0-win64.zip` | `MicroBridge Player.exe` + `onnxruntime.dll` + `Kim_Vocal_2.onnx` + `vocals_weights.bin` |
+| `MicroBridge-Player-VST3-v1.1.0-win64.zip` | `MicroBridge Player.vst3` bundle (already contains the DLL, model and weights) |
 
 See [Releases](../../releases).
 
@@ -126,7 +126,7 @@ ThirdParty/             JUCE, ORT, kissfft, MDX model (git-ignored)
 Tools/                  AudioDump / SepVerify / model analysis scripts + weights
 Tests/                  engine test + sample media
 docs/                   UI screenshots (zh-CN / en + earlier layout)
-CMakeLists.txt          build definition (project version 1.0.1)
+CMakeLists.txt          build definition (project version 1.1.0)
 build.bat               MSVC environment + configure + build
 ```
 

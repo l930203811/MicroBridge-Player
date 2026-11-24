@@ -2,53 +2,24 @@
 
 namespace
 {
-// 与「MicroBridge Player」应用图标同款视觉的矢量 mini logo：
-// 深蓝圆角方 + 机架细环 + 大号白色 S + 底部绿黄红 LED 频谱
+// 左上角品牌图标：直接使用微音桥应用图标（与 exe / VST3 图标同源），不再矢量绘制 S。
+// 资源以 BinaryData 嵌入（SRackAssets），绘制走 ImageCache 缓存，paint 每帧取用无额外 IO。
 void drawMiniAppIcon (juce::Graphics& g, juce::Rectangle<float> b)
 {
-    const float radius = b.getWidth() * 0.24f;
-
-    juce::ColourGradient grad (juce::Colour (0xff203a8e), b.getTopLeft(),
-                               juce::Colour (0xff050a20), b.getBottomRight(), false);
-    g.setGradientFill (grad);
-    g.fillRoundedRectangle (b, radius);
-    g.setColour (juce::Colour (0xff8ab8ff).withAlpha (0.50f));
-    g.drawRoundedRectangle (b.reduced (0.5f), radius, 1.0f);
-
-    const float cx = b.getCentreX();
-    const float cy = b.getY() + b.getHeight() * 0.44f;
-    const float r  = b.getWidth() * 0.30f;
-    g.setColour (juce::Colour (0xff8ab8ff).withAlpha (0.38f));
-    g.drawEllipse (cx - r, cy - r, r * 2.0f, r * 2.0f, 0.8f);
-
-    // 深色描边：四个方向各偏移 0.6px 画一次，再叠白字
-    g.setFont (juce::Font (juce::FontOptions ("Arial", b.getHeight() * 0.62f, juce::Font::bold)));
-    auto sr = b.withTrimmedBottom (b.getHeight() * 0.13f);
-    g.setColour (juce::Colour (0xff0a2140));
-    for (int k = 0; k < 4; ++k)
+    const char* data = BinaryData::MicroBridgeiconsmall_png;
+    const int size = BinaryData::MicroBridgeiconsmall_pngSize;
+    if (data != nullptr && size > 0)
     {
-        const float dx = (k == 0 || k == 3) ? -0.6f : 0.6f;
-        const float dy = (k < 2) ? -0.6f : 0.6f;
-        g.drawText ("S", sr.translated (dx, dy), juce::Justification::centred);
+        auto img = juce::ImageCache::getFromMemory (data, size);
+        if (img.isValid())
+        {
+            g.drawImage (img, b, juce::RectanglePlacement::stretchToFit);
+            return;
+        }
     }
-    g.setColour (juce::Colour (0xffeaf7ff));
-    g.drawText ("S", sr, juce::Justification::centred);
-
-    const juce::Colour led[] = { juce::Colour (0xff33d433),
-                                 juce::Colour (0xffeed500),
-                                 juce::Colour (0xffe4390e) };
-    const float heights[] = { 0.11f, 0.17f, 0.12f };
-    const float barW = b.getWidth() * 0.12f;
-    const float gap  = b.getWidth() * 0.07f;
-    float x = cx - (3.0f * barW + 2.0f * gap) * 0.5f;
-    for (int i = 0; i < 3; ++i)
-    {
-        const float hh = b.getHeight() * heights[i];
-        g.setColour (led[i]);
-        g.fillRoundedRectangle (x, b.getBottom() - b.getHeight() * 0.055f - hh,
-                                barW, hh, 0.8f);
-        x += barW + gap;
-    }
+    // 资源缺失兜底：深蓝圆角方，避免出现旧的 S 图形
+    g.setColour (juce::Colour (0xff203a8e));
+    g.fillRoundedRectangle (b, b.getWidth() * 0.22f);
 }
 }
 
@@ -160,6 +131,47 @@ MediaPlayAudioProcessorEditor::MediaPlayAudioProcessorEditor (MediaPlayAudioProc
         lyricsOverlay.setVisible (lyricBtn.getToggleState());
         lyricBtn.repaint();
     };
+
+    // 桌面歌词：右上角独立开关。打开时创建顶层歌词窗并即刻填词，
+    // 关闭（含窗口内 ×）时销毁窗口；开关状态随宿主工程保存，位置/置顶存 ini。
+    addAndMakeVisible (desktopLyricsBtn);
+    desktopLyricsBtn.setToggleState (processorRef.getDesktopLyricsEnabled(), juce::dontSendNotification);
+    desktopLyricsBtn.onStateChange = [this]
+    {
+        const bool on = desktopLyricsBtn.getToggleState();
+        processorRef.setDesktopLyricsEnabled (on);
+        if (on)
+        {
+            if (desktopLyrics_ == nullptr)
+            {
+                desktopLyrics_ = std::make_unique<DesktopLyricsWindow>();
+                auto* w = desktopLyrics_.get();
+                w->onPinChanged = [] (bool) {};   // 置顶已由窗口自存 ini
+                w->onLockChanged = [] (bool) {};  // 锁定为本次运行态，无需外部持久化
+                w->onCloseClicked = [this]
+                {
+                    // mouseDown 内不能直接自毁：延到下一轮消息循环
+                    juce::Component::SafePointer<MediaPlayAudioProcessorEditor> safe (this);
+                    juce::MessageManager::callAsync ([safe]
+                    {
+                        if (auto* ed = safe.getComponent())
+                        {
+                            ed->processorRef.setDesktopLyricsEnabled (false);
+                            ed->desktopLyricsBtn.setToggleState (false, juce::dontSendNotification);
+                            ed->desktopLyrics_.reset();
+                        }
+                    });
+                };
+            }
+            pushDesktopLyrics();   // 打开即刻填当前行，不等下一帧
+        }
+        else
+            desktopLyrics_.reset();
+        desktopLyricsBtn.repaint();
+    };
+    // 构造期宿主状态通常已恢复：若开关为开，走一次回调创建窗口
+    if (desktopLyricsBtn.getToggleState())
+        desktopLyricsBtn.onStateChange();
 
     // 频谱开关（仅「音频播放」页生效，状态随宿主持久化）
     addAndMakeVisible (spectrumBtn);
@@ -292,6 +304,8 @@ MediaPlayAudioProcessorEditor::MediaPlayAudioProcessorEditor (MediaPlayAudioProc
 
 MediaPlayAudioProcessorEditor::~MediaPlayAudioProcessorEditor()
 {
+    // 顶层歌词窗是 addToDesktop 的独立组件，编辑器销毁时必须显式回收
+    desktopLyrics_.reset();
     setLookAndFeel (nullptr);
 }
 
@@ -315,6 +329,29 @@ void MediaPlayAudioProcessorEditor::parentHierarchyChanged()
 }
 
 //==============================================================================
+// 桌面歌词：每帧把当前行 / 播放时间 / 主题配色喂给顶层窗口，与播放器 KTV 浮层同源。
+void MediaPlayAudioProcessorEditor::pushDesktopLyrics()
+{
+    if (desktopLyrics_ == nullptr) return;
+    sr::syncTheme();
+    auto& lyr = processorRef.getLyrics();
+    const double t = processorRef.getCurrentPosition();
+    const LyricLine* line = lyr.isLoaded() ? lyr.line (lyr.lineIndexAt (t)) : nullptr;
+
+    DesktopLyricsWindow::Palette pal;
+    pal.base    = sr::lyricText;                 // 与播放器当前歌词文字同色
+    pal.sung0   = sr::red;                       // 已唱渐变与 KTV 浮层一致
+    pal.sungMid = sr::yellow;
+    pal.sung1   = sr::green;
+    pal.outline = sr::isDark() ? juce::Colours::black.withAlpha (0.80f)
+                               : juce::Colours::white.withAlpha (0.92f);
+    pal.hint    = sr::dim;
+    desktopLyrics_->setLine (line, t, pal,
+        lyr.isLoaded() ? juce::String() : MediaPlayAudioProcessor::zh ("未找到歌词"),
+        &lyr);                                   // 整本歌词供窗口计算全曲统一字号
+}
+
+//==============================================================================
 // 页面已整合：不再有 tab 切换，这里只负责各控件的可见性与初始禁用状态。
 void MediaPlayAudioProcessorEditor::applyTab()
 {
@@ -327,6 +364,7 @@ void MediaPlayAudioProcessorEditor::applyTab()
     sepBtn.setVisible (true);
     bypassBtn.setVisible (true);
     langBtn.setVisible (true);
+    desktopLyricsBtn.setVisible (true);
     sourceBtn.setVisible (true);
     trackLabel.setVisible (true);
     sepStatus.setVisible (true);
@@ -357,6 +395,7 @@ void MediaPlayAudioProcessorEditor::applyLanguage()
     lyricBtn.setButtonText    (MediaPlayAudioProcessor::zh ("歌词"));
     offsetBtn.setButtonText   (MediaPlayAudioProcessor::zh ("偏移"));
     volumeBtn.setButtonText   (MediaPlayAudioProcessor::zh ("音量"));
+    desktopLyricsBtn.setButtonText (MediaPlayAudioProcessor::zh ("桌面歌词"));
     modeBtn.setButtonText     (MediaPlayAudioProcessor::playModeName (processorRef.getPlayMode()));
 
     appTitle.setText (juce::String ("MicroBridge Player"), juce::dontSendNotification);
@@ -421,6 +460,7 @@ void MediaPlayAudioProcessorEditor::resized()
 
     // 最右上角：「主题」「中 / EN」「旁通」三个按钮并排同一行（与顶部状态条同高）。
     // 从右侧留 16px 边距向左侧排布，中间 6px 间距；状态条右缘给它们让位。
+    // 桌面歌词按钮已迁至底部按钮组（紧邻「歌词」）。
     const int mainX = 200;
     const int mainW = area.getWidth() - mainX;
     constexpr int hdrBtnW = 72, hdrBtnGap = 6, hdrBtnY = 3, hdrBtnH = 28;
@@ -461,14 +501,31 @@ void MediaPlayAudioProcessorEditor::resized()
     playBtn.setBounds (266, transportY,     42, 42);
     nextBtn.setBounds (324, transportY + 4, 34, 34);
 
-    // 底部按钮组（从右往左）：音量 / 偏移 / 歌词 / 频谱 / 输出源
-    // 「主题」「中 / EN」「旁通」已迁到窗口最右上角，底部不再占用位置。
+    // 底部按钮组（从右往左）：音量 / 偏移 / 歌词 / 桌面歌词 / 频谱 / 输出源
+    // 「主题」「中 / EN」「旁通」在右上角；桌面歌词从右上角迁来，紧邻「歌词」。
     const int rowY = bottomY - 38;
-    volumeBtn.setBounds   (rightEdge - 56, rowY, 56, 28);
-    offsetBtn.setBounds   (volumeBtn.getX() - 4 - 48, rowY, 48, 28);
-    lyricBtn.setBounds    (offsetBtn.getX() - 4 - 48, rowY, 48, 28);
-    spectrumBtn.setBounds (lyricBtn.getX() - 4 - 48, rowY, 48, 28);
-    sourceBtn.setBounds   (spectrumBtn.getX() - 4 - 76, rowY, 76, 28);
+    // 期望宽度；窄窗下按可用空间整体等比收缩，避免侵占左侧播放控制区（prev/play/next）。
+    const int g = 4;
+    int wVol = 56, wOff = 48, wLy = 48, wDL = 72, wSpec = 48, wSrc = 76;
+    const int wantTotal = wVol + wOff + wLy + wDL + wSpec + wSrc + g * 5;
+    const int leftBound = nextBtn.getRight() + 10;
+    const int avail = rightEdge - leftBound;
+    if (avail > 0 && avail < wantTotal)
+    {
+        const float k = float (avail) / float (wantTotal);
+        wVol  = juce::jmax (40, int (wVol  * k));
+        wOff  = juce::jmax (38, int (wOff  * k));
+        wLy   = juce::jmax (38, int (wLy   * k));
+        wDL   = juce::jmax (58, int (wDL   * k));   // 「桌面歌词」四字最低可读宽度
+        wSpec = juce::jmax (38, int (wSpec * k));
+        wSrc  = juce::jmax (58, int (wSrc  * k));
+    }
+    volumeBtn.setBounds        (rightEdge - wVol, rowY, wVol, 28);
+    offsetBtn.setBounds        (volumeBtn.getX() - g - wOff, rowY, wOff, 28);
+    lyricBtn.setBounds         (offsetBtn.getX() - g - wLy, rowY, wLy, 28);
+    desktopLyricsBtn.setBounds (lyricBtn.getX() - g - wDL, rowY, wDL, 28);
+    spectrumBtn.setBounds      (desktopLyricsBtn.getX() - g - wSpec, rowY, wSpec, 28);
+    sourceBtn.setBounds        (spectrumBtn.getX() - g - wSrc, rowY, wSrc, 28);
 
     // 向上弹窗：宽度与触发按钮完全一致、底边贴住按钮上沿
     const auto placePopup = [] (juce::Component& popup, const juce::Component& btn, int h)
@@ -492,6 +549,13 @@ void MediaPlayAudioProcessorEditor::timerCallback()
     const bool bypassNow = processorRef.getBypassed();
     if (bypassBtn.getToggleState() != bypassNow)
         bypassBtn.setToggleState (bypassNow, juce::dontSendNotification);
+
+    // 桌面歌词：宿主可能在编辑器构造后才恢复开关状态，首帧对齐；窗口在时每帧喂词
+    const bool dlNow = processorRef.getDesktopLyricsEnabled();
+    if (desktopLyricsBtn.getToggleState() != dlNow)
+        desktopLyricsBtn.setToggleState (dlNow, juce::sendNotification);
+    if (desktopLyrics_ != nullptr)
+        pushDesktopLyrics();
 
     // 诊断自动加载：设置 MEDIAPLAY_AUTOLOAD 环境变量后 2 秒自动导入并播放
     if (! autoLoaded)

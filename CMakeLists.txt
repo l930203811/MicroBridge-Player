@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 set(CMAKE_CXX_STANDARD 17)
-project(SRack VERSION 1.0.1 LANGUAGES C CXX)
+project(SRack VERSION 1.1.0 LANGUAGES C CXX)
 
 add_subdirectory(ThirdParty/juce-8.0.15)
 
@@ -19,9 +19,9 @@ juce_add_plugin(VstMediaPlayer
     NEEDS_MIDI_INPUT FALSE
     COPY_PLUGIN_AFTER_BUILD TRUE
     VST3_CATEGORIES Fx
-    # Windows exe / VST3 bundle icon（文件名沿用旧 S-Rack-*，仅内部资源，非用户可见品牌）
-    ICON_BIG "Assets/S-Rack-icon.png"
-    ICON_SMALL "Assets/S-Rack-icon-small.png"
+    # Windows exe / VST3 bundle icon：与微音桥统一品牌图标（由 Assets/Icons/app_icon.png 缩放）
+    ICON_BIG "Assets/MicroBridge-icon.png"
+    ICON_SMALL "Assets/MicroBridge-icon-small.png"
 )
 
 target_sources(VstMediaPlayer PRIVATE
@@ -29,6 +29,8 @@ target_sources(VstMediaPlayer PRIVATE
     Source/PluginEditor.cpp
     Source/VisualizerComponent.cpp
     Source/Lyrics.h
+    Source/EmbeddedLyrics.h
+    Source/DesktopLyrics.h
     Source/StemSeparator.h
     Source/StemPanel.h
     Source/SeparationEngine.h
@@ -38,6 +40,9 @@ target_sources(VstMediaPlayer PRIVATE
 )
 
 juce_generate_juce_header(VstMediaPlayer)
+
+# 品牌图标资源嵌入：界面左上角 logo 使用（BinaryData::MicroBridge_icon_small_png）
+juce_add_binary_data(SRackAssets SOURCES Assets/MicroBridge-icon-small.png)
 
 # 源码为 UTF-8（含中文界面文本），强制 MSVC 按 UTF-8 解析
 target_compile_options(VstMediaPlayer PRIVATE
@@ -55,6 +60,7 @@ target_compile_definitions(VstMediaPlayer PUBLIC
 target_link_libraries(VstMediaPlayer PRIVATE
     juce::juce_audio_utils
     juce::juce_dsp
+    SRackAssets
     PUBLIC
     juce::juce_recommended_config_flags
 )

@@ -2,9 +2,12 @@
 
 #include <JuceHeader.h>
 #include <vector>
+#include <algorithm>
+#include "EmbeddedLyrics.h"
 
-// LRC 歌词解析：支持普通逐句格式 [mm:ss.xx]歌词，
-// 以及增强逐字格式 [mm:ss.xx]<mm:ss.xx>字<mm:ss.xx>字...
+// LRC 歌词解析：支持普通逐句格式 [mm:ss.xx]歌词、
+// 增强逐字格式 [mm:ss.xx]<mm:ss.xx>字<mm:ss.xx>字...，
+// 以及毫秒制逐字格式 [起始ms,行时长ms]字(起始ms,字时长ms)字...（KRC 明文变体）。
 struct LyricWord
 {
     double t0 = 0.0, t1 = 0.0;
@@ -21,7 +24,8 @@ struct LyricLine
 class Lyrics
 {
 public:
-    // 在音频同目录找同名 .lrc；失败时保持空状态
+    // 加载顺序：同名 .lrc → 音频文件内嵌标签歌词。
+    // 内嵌支持 ID3v2 USLT/SYLT、FLAC/OGG Vorbis LYRICS、M4A ©lyr、APEv2。
     bool loadForFile (const juce::File& audio)
     {
         clear();
@@ -29,9 +33,16 @@ public:
             return false;
         auto lrc = audio.getParentDirectory().getChildFile (
                        audio.getFileNameWithoutExtension() + ".lrc");
-        if (! lrc.existsAsFile())
-            return false;
-        return parse (lrc.loadFileAsString());
+        if (lrc.existsAsFile() && parse (lrc.loadFileAsString()))
+            return true;
+
+        // 内嵌歌词：路径按 UTF-8 交给纯 C++ 解析器（中文路径可用）
+        const auto embedded = EmbeddedLyrics::extractLyrics (
+            audio.getFullPathName().toStdString());
+        if (! embedded.empty()
+            && parse (juce::String::fromUTF8 (embedded.c_str(), (int) embedded.size())))
+            return true;
+        return false;
     }
 
     void clear()
@@ -89,6 +100,89 @@ private:
         return -1.0;
     }
 
+    static bool allDigits (const juce::String& s)
+    {
+        if (s.isEmpty()) return false;
+        for (int i = 0; i < s.length(); ++i)
+            if (! juce::CharacterFunctions::isDigit (s[i])) return false;
+        return true;
+    }
+
+    // 毫秒制逐字格式（酷狗 KRC 明文 / 部分导出工具变体）：
+    //   [起始ms,行时长ms]字(起始ms,字时长ms)字(起始ms,字时长ms)字...
+    // 字文本位于字时间戳之前，末尾残余文本并入最后一个字。
+    // 返回 false 表示本行不是该格式（交给标准 LRC 路径）。
+    bool parseMsLine (const juce::String& line, double offsetSec)
+    {
+        if (! line.startsWith ("[")) return false;
+        const int close = line.indexOf ("]");
+        if (close < 0) return false;
+        const auto stamp = line.substring (1, close);
+        const int comma = stamp.indexOf (",");
+        if (comma < 0) return false;
+        const auto msText = stamp.substring (0, comma).trim();
+        const auto durText = stamp.substring (comma + 1).trim();
+        if (! allDigits (msText) || ! allDigits (durText)) return false;
+
+        const double t0 = msText.getDoubleValue() / 1000.0 + offsetSec;
+        const auto body = line.substring (close + 1);
+
+        struct Seg { double t; juce::String text; };
+        std::vector<Seg> segs;
+        juce::String acc;
+        int i = 0;
+        while (i < body.length())
+        {
+            if (body[i] == '(')
+            {
+                const int end = body.indexOf (i, ")");
+                if (end > i)
+                {
+                    const auto inner = body.substring (i + 1, end);
+                    const int c2 = inner.indexOf (",");
+                    if (c2 > 0 && allDigits (inner.substring (0, c2).trim()))
+                    {
+                        segs.push_back ({ inner.substring (0, c2).trim().getDoubleValue()
+                                          / 1000.0 + offsetSec, acc });
+                        acc = juce::String();
+                        i = end + 1;
+                        continue;
+                    }
+                }
+            }
+            acc += body[i];
+            ++i;
+        }
+        const bool hadWordStamps = ! segs.empty();
+        if (! hadWordStamps)
+            segs.push_back ({ t0, body });          // 无字戳：整行普通文本
+        else if (! acc.isEmpty())
+            segs.back().text += acc;                // 尾段并入末字
+
+        LyricLine L;
+        L.t0 = t0;
+        std::vector<LyricWord> words;
+        juce::String text;
+        for (size_t k = 0; k < segs.size(); ++k)
+        {
+            LyricWord w;
+            w.t0 = segs[k].t;
+            w.t1 = (k + 1 < segs.size()) ? segs[k + 1].t : segs[k].t + 0.5;
+            w.text = segs[k].text.trim();
+            if (w.text.isEmpty()) continue;
+            words.push_back (w);
+            text += w.text;
+        }
+        L.text = text;
+        if (hadWordStamps)
+        {
+            L.words = words;
+            if (! words.empty()) wordLevelAny = true;
+        }
+        lines.push_back (L);
+        return true;
+    }
+
     bool parse (const juce::String& content)
     {
         double offsetSec = 0.0;
@@ -96,6 +190,11 @@ private:
         {
             auto rest = raw.trim();
             if (rest.isEmpty()) continue;
+
+            // 毫秒制逐字格式必须先于标准 LRC 处理，否则 [795,4678]
+            // 会被 parseTs 当成 795 秒。
+            if (parseMsLine (rest, offsetSec))
+                continue;
 
             // 提取行首连续的 [..] 标签
             juce::Array<double> times;

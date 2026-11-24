@@ -112,10 +112,14 @@ public:
     juce::String getPlaylistItem (int i) const { return playlist[(size_t) i].getFileName(); }
     juce::File   getPlaylistFile (int i) const { return playlist[(size_t) i]; }
 
-    // 歌词（loadTrack 时自动加载同名 .lrc；不支持/不支持逐字时逐句显示）
+    // 歌词（loadTrack 时自动加载同名 .lrc / 音频内嵌标签；逐字或逐句显示）
     Lyrics& getLyrics()            { return lyrics; }
     bool getLyricsEnabled() const  { return lyricsOn.load (std::memory_order_relaxed); }
     void setLyricsEnabled (bool on){ lyricsOn.store (on, std::memory_order_relaxed); }
+
+    // 桌面歌词窗口开关（位置/尺寸/置顶由窗口自身写入用户目录 ini，不随工程）
+    bool getDesktopLyricsEnabled() const  { return desktopLyricsOn.load (std::memory_order_relaxed); }
+    void setDesktopLyricsEnabled (bool on){ desktopLyricsOn.store (on, std::memory_order_relaxed); }
 
     // 可视化频谱开关（隐藏/显示整个可视化区域）
     bool getSpectrumEnabled() const  { return spectrumOn.load (std::memory_order_relaxed); }
@@ -259,6 +263,7 @@ private:
     PlayMode playMode = LoopAll;
     Lyrics lyrics;                                     // 当前曲目歌词（消息线程访问）
     std::atomic<bool> lyricsOn { true };               // 歌词显示开关
+    std::atomic<bool> desktopLyricsOn { false };       // 桌面歌词窗口开关
     std::atomic<bool> spectrumOn { true };             // 可视化频谱显示开关
     std::atomic<int>  uiTab { 1 };                     // 兼容旧状态：恒为音频播放页
     std::map<juce::String, double> lyricOffsets;       // 按歌曲路径记忆的歌词偏移（秒）
